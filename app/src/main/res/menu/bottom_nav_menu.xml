@@ -1,0 +1,18 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_dashboard"
+        android:icon="@android:drawable/ic_menu_sort_by_size"
+        android:title="Dashboard" />
+    <item
+        android:id="@+id/nav_running"
+        android:icon="@android:drawable/ic_menu_mylocation"
+        android:title="Run" />
+    <item
+        android:id="@+id/nav_diet"
+        android:icon="@android:drawable/ic_menu_agenda"
+        android:title="Diet" />
+    <item
+        android:id="@+id/nav_sleep"
+        android:icon="@android:drawable/ic_menu_recent_history"
+        android:title="Sleep" />
+</menu>
