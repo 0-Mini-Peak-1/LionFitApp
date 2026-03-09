@@ -1,6 +1,16 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    kotlin("plugin.serialization") version "1.9.22"
+}
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(FileInputStream(localPropertiesFile))
 }
 
 android {
@@ -17,8 +27,10 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Supabase API key
+        buildConfigField("String", "SUPABASE_URL", localProperties.getProperty("SUPABASE_URL") ?: "\"\"")
+        buildConfigField("String", "SUPABASE_ANON_KEY", localProperties.getProperty("SUPABASE_ANON_KEY") ?: "\"\"")
     }
 
     buildTypes {
@@ -36,6 +48,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -83,4 +96,15 @@ dependencies {
 
     // Required for BottomNavigationView (Material Design components)
     implementation("com.google.android.material:material:1.11.0")
+
+    // The official Supabase Kotlin Client
+    val supabaseVersion = "2.2.3"
+    implementation("io.github.jan-tennert.supabase:postgrest-kt:$supabaseVersion") // For Database
+    implementation("io.github.jan-tennert.supabase:gotrue-kt:$supabaseVersion")    // For Authentication
+
+    // Ktor Engine (Required for the Supabase client to make network calls)
+    implementation("io.ktor:ktor-client-android:3.4.1")
+
+    // Converts Kotlin objects to JSON for Supabase
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0")
 }
