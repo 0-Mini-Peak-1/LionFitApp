@@ -4,11 +4,12 @@ import android.Manifest
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
-import com.google.android.material.button.MaterialButton
 import com.lionfit.app.R
 import com.lionfit.app.services.TrackingService
 import com.lionfit.app.utils.Calculators
@@ -22,19 +23,17 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
 
     private lateinit var map: MapView
     private lateinit var tvTimer: TextView
-    private lateinit var btnStart: MaterialButton
-    private lateinit var btnStop: MaterialButton
+    private lateinit var btnPlay: ImageButton
+    private lateinit var btnPause: ImageButton
+    private lateinit var btnStop: ImageButton
 
-    // 1. This handles the result of the permission popup automatically
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         val fineLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
         if (fineLocationGranted) {
-            // The user clicked "Allow", start the run!
-            startTrackingService()
+            sendCommandToService("ACTION_START_OR_RESUME_SERVICE")
         } else {
-            // The user clicked "Deny"
             Toast.makeText(requireContext(), "Location permission is required to track runs.", Toast.LENGTH_SHORT).show()
         }
     }
@@ -42,46 +41,96 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // 2. Link the variables to your XML layout elements
+        // Bind the new UI elements
         tvTimer = view.findViewById(R.id.tv_timer)
-        btnStart = view.findViewById(R.id.btn_start)
+        btnPlay = view.findViewById(R.id.btn_play)
+        btnPause = view.findViewById(R.id.btn_pause)
         btnStop = view.findViewById(R.id.btn_stop)
 
-        // 3. Map Setup (Kept exactly as you had it)
+        // Initialize Map
         Configuration.getInstance().userAgentValue = requireContext().packageName
         map = view.findViewById(R.id.map)
         map.setTileSource(TileSourceFactory.MAPNIK)
         map.setMultiTouchControls(true)
-
         val mapController = map.controller
         mapController.setZoom(16.0)
         mapController.setCenter(GeoPoint(13.8256, 100.4485))
 
-        // 4. Handle the Start Button Click
-        btnStart.setOnClickListener {
-            if (PermissionsHelper.hasLocationPermissions(requireContext())) {
-                // We already have permission, just start the service
-                startTrackingService()
-            } else {
-                // We don't have permission, launch the popup asking for it
-                requestPermissionLauncher.launch(
-                    arrayOf(
-                        Manifest.permission.ACCESS_FINE_LOCATION,
-                        Manifest.permission.ACCESS_COARSE_LOCATION
-                    )
-                )
-            }
-        }
-
-        // 5. Handle the Stop Button Click
-        btnStop.setOnClickListener {
-            stopTrackingService()
-        }
-
+        setupClickListeners()
         subscribeToObservers()
     }
 
-    // Add this new function at the bottom of the class
+    private fun setupClickListeners() {
+        // PLAY / RESUME
+        btnPlay.setOnClickListener {
+            if (PermissionsHelper.hasLocationPermissions(requireContext())) {
+                sendCommandToService("ACTION_START_OR_RESUME_SERVICE")
+                updateButtonVisibility(isTrackingActive = true)
+            } else {
+                // Ask for Location AND Notifications at the same time
+                val permissionsToRequest = mutableListOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+
+                // Only ask for POST_NOTIFICATIONS if the phone is Android 13 or newer
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+                }
+
+                requestPermissionLauncher.launch(permissionsToRequest.toTypedArray())
+            }
+        }
+
+        // PAUSE
+        btnPause.setOnClickListener {
+            sendCommandToService("ACTION_PAUSE_SERVICE")
+            // Optional: You could change the Play button icon to a "Resume" icon here if you want
+        }
+
+        // STOP (Triggers the Confirmation Dialog)
+        btnStop.setOnClickListener {
+            showStopConfirmationDialog()
+        }
+    }
+
+    private fun showStopConfirmationDialog() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Are u sure to stop Recording")
+            .setPositiveButton("Confirm") { _, _ ->
+                sendCommandToService("ACTION_STOP_SERVICE")
+
+                // Hide the Pause and Stop buttons again
+                updateButtonVisibility(isTrackingActive = false)
+
+                // TODO: Add logic here to save the run data to the database
+            }
+            .setNegativeButton("Cancel") { dialogInterface, _ ->
+                dialogInterface.dismiss()
+            }
+            .create()
+            .show()
+    }
+
+    // Helper function to handle the UI state transition smoothly
+    private fun updateButtonVisibility(isTrackingActive: Boolean) {
+        if (isTrackingActive) {
+            btnPause.visibility = View.VISIBLE
+            btnStop.visibility = View.VISIBLE
+        } else {
+            btnPause.visibility = View.GONE
+            btnStop.visibility = View.GONE
+        }
+    }
+
+    // Helper function to keep Intents clean
+    private fun sendCommandToService(actionStr: String) {
+        val intent = Intent(requireContext(), TrackingService::class.java).also {
+            it.action = actionStr
+        }
+        requireContext().startService(intent)
+    }
+
     private fun subscribeToObservers() {
         TrackingService.timeRunInMillis.observe(viewLifecycleOwner) { timeInMillis ->
             val formattedTime = Calculators.getFormattedStopWatchTime(timeInMillis)
@@ -89,29 +138,6 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
         }
     }
 
-    private fun startTrackingService() {
-        // Change the button text so the user knows it's active
-        btnStart.text = "Tracking..."
-
-        // Wake up the TrackingService we built earlier
-        val intent = Intent(requireContext(), TrackingService::class.java).also {
-            it.action = "ACTION_START_OR_RESUME_SERVICE"
-        }
-        requireContext().startService(intent)
-    }
-
-    private fun stopTrackingService() {
-        // Reset the button
-        btnStart.text = "Start Run"
-
-        // Tell the TrackingService to shut down
-        val intent = Intent(requireContext(), TrackingService::class.java).also {
-            it.action = "ACTION_STOP_SERVICE"
-        }
-        requireContext().startService(intent)
-    }
-
-    // Lifecycle methods to keep the map memory usage low
     override fun onResume() {
         super.onResume()
         map.onResume()

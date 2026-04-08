@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.lionfit.app.R
 
 class TrackingService : Service() {
 
@@ -49,17 +50,40 @@ class TrackingService : Service() {
                     }
                     startTimer()
                 }
+                "ACTION_PAUSE_SERVICE" -> {
+                    pauseService()
+                }
                 "ACTION_STOP_SERVICE" -> {
-                    isTracking.postValue(false)
-                    isTimerEnabled = false
-                    postInitialValues()
-                    isFirstRun = true
-                    stopForeground(true)
-                    stopSelf()
+                    killService()
                 }
             }
         }
         return START_STICKY
+    }
+
+    private fun pauseService() {
+        // This instantly stops the coroutine while loop and saves the elapsed time
+        isTracking.postValue(false)
+        isTimerEnabled = false
+
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notificationBuilder = NotificationCompat.Builder(this, "tracking_channel")
+            .setAutoCancel(false)
+            .setOngoing(true)
+            .setSmallIcon(R.drawable.ic_pause)
+            .setContentTitle("LionFit")
+            .setContentText("Running service paused")
+
+        notificationManager.notify(1, notificationBuilder.build())
+    }
+
+    private fun killService() {
+        isTracking.postValue(false)
+        isTimerEnabled = false
+        postInitialValues() // Resets time back to 00:00
+        isFirstRun = true
+        stopForeground(true)
+        stopSelf() // Tells the Android OS to completely destroy the service
     }
 
     private fun startTimer() {
@@ -89,6 +113,7 @@ class TrackingService : Service() {
         val notificationBuilder = NotificationCompat.Builder(this, "tracking_channel")
             .setAutoCancel(false)
             .setOngoing(true)
+            .setSmallIcon(R.drawable.ic_play)
             .setContentTitle("LionFit")
             .setContentText("Tracking your run...")
 

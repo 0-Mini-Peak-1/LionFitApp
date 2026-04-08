@@ -26,9 +26,10 @@ class MainActivity : AppCompatActivity() {
         bottomNav.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_dashboard -> replaceFragment(DashboardFragment())
-                R.id.nav_running -> replaceFragment(RunningFragment()) // Now uses the real one!
                 R.id.nav_diet -> replaceFragment(DietFragment())
+                R.id.nav_running -> replaceFragment(RunningFragment())
                 R.id.nav_sleep -> replaceFragment(SleepFragment())
+                R.id.nav_profile -> replaceFragment(ProfileFragment())
             }
             // Return true to indicate the tap was handled successfully
             true
@@ -51,4 +52,5 @@ class MainActivity : AppCompatActivity() {
 // Keep these remaining three until your team creates their actual files.
 class DashboardFragment : Fragment(R.layout.fragment_placeholder)
 class DietFragment : Fragment(R.layout.fragment_placeholder)
+class ProfileFragment : Fragment(R.layout.fragment_placeholder)
 class SleepFragment : Fragment(R.layout.fragment_placeholder)

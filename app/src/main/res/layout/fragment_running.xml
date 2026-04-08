@@ -19,8 +19,8 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
-        app:cardCornerRadius="16dp"
-        app:cardElevation="8dp"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="12dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -29,23 +29,23 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="24dp">
 
             <TextView
-                android:id="@+id/tv_timer"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:text="00:00"
-                android:textSize="48sp"
+                android:text="Run"
+                android:textSize="18sp"
                 android:textStyle="bold"
-                android:textColor="#212121"/>
+                android:textColor="#000000"
+                android:layout_marginBottom="16dp"/>
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginTop="16dp"
+                android:baselineAligned="false"
                 android:weightSum="3">
 
                 <LinearLayout
@@ -54,8 +54,8 @@
                     android:layout_weight="1"
                     android:gravity="center"
                     android:orientation="vertical">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Distance" android:textSize="12sp"/>
-                    <TextView android:id="@+id/tv_distance" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0.00 km" android:textSize="18sp" android:textStyle="bold"/>
+                    <TextView android:id="@+id/tv_timer" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="00:00" android:textSize="32sp" android:textStyle="bold" android:textColor="#000000"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="time" android:textSize="12sp"/>
                 </LinearLayout>
 
                 <LinearLayout
@@ -64,8 +64,8 @@
                     android:layout_weight="1"
                     android:gravity="center"
                     android:orientation="vertical">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Pace" android:textSize="12sp"/>
-                    <TextView android:id="@+id/tv_pace" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0:00 /km" android:textSize="18sp" android:textStyle="bold"/>
+                    <TextView android:id="@+id/tv_distance" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0.00" android:textSize="32sp" android:textStyle="bold" android:textColor="#000000"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Distance (km)" android:textSize="12sp"/>
                 </LinearLayout>
 
                 <LinearLayout
@@ -74,8 +74,8 @@
                     android:layout_weight="1"
                     android:gravity="center"
                     android:orientation="vertical">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Calories" android:textSize="12sp"/>
-                    <TextView android:id="@+id/tv_calories" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0 kcal" android:textSize="18sp" android:textStyle="bold"/>
+                    <TextView android:id="@+id/tv_speed" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0.0" android:textSize="32sp" android:textStyle="bold" android:textColor="#000000"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Avg.speed(km/h)" android:textSize="12sp"/>
                 </LinearLayout>
             </LinearLayout>
 
@@ -86,19 +86,33 @@
                 android:gravity="center"
                 android:orientation="horizontal">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_start"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="16dp"
-                    android:text="Start Run" />
+                <ImageButton
+                    android:id="@+id/btn_pause"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginEnd="32dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_pause"
+                    android:visibility="gone"
+                    app:tint="#000000" />
 
-                <com.google.android.material.button.MaterialButton
+                <ImageButton
+                    android:id="@+id/btn_play"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:background="@drawable/ic_play"
+                    android:backgroundTint="#000000"
+                    app:tint="#FFFFFF" />
+
+                <ImageButton
                     android:id="@+id/btn_stop"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Stop"
-                    app:backgroundTint="#F44336" />
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginStart="32dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:src="@drawable/ic_stop"
+                    android:visibility="gone"
+                    app:tint="#000000" />
             </LinearLayout>
         </LinearLayout>
     </androidx.cardview.widget.CardView>
