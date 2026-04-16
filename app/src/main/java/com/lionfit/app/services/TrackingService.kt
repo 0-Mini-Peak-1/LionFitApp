@@ -31,16 +31,17 @@ class TrackingService : Service() {
     private var isTimerEnabled = false
     private var timeStarted = 0L
     private var timeRun = 0L
+    private var serviceKilled = false
 
     private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
     private lateinit var notificationManager: NotificationManager
     private lateinit var notificationBuilder: NotificationCompat.Builder
 
     companion object {
-        val isTracking = MutableLiveData<Boolean>()
         val timeRunInMillis = MutableLiveData<Long>()
-        // THIS IS THE LIST THAT HOLDS YOUR RUNNING COORDINATES
-        val pathPoints = MutableLiveData<MutableList<GeoPoint>>()
+        val isTracking = MutableLiveData<Boolean>()
+        val pathPoints = MutableLiveData<MutableList<MutableList<GeoPoint>>>()
+        val currentLocation = MutableLiveData<android.location.Location>()
     }
 
     private fun postInitialValues() {
@@ -61,11 +62,13 @@ class TrackingService : Service() {
             .setSmallIcon(R.drawable.ic_play)
             .setContentTitle("LionFit")
             .setContentText("Tracking your run...")
+    }
 
-        // Listen for tracking state changes to turn GPS on/off
-        isTracking.observeForever { isTracking ->
-            updateLocationTracking(isTracking)
-        }
+    private fun addEmptyPolyline() {
+        pathPoints.value?.apply {
+            add(mutableListOf())
+            pathPoints.postValue(this)
+        } ?: pathPoints.postValue(mutableListOf(mutableListOf()))
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -78,12 +81,14 @@ class TrackingService : Service() {
 
                     if (isFirstRun) {
                         startForegroundService()
+                        startLocationUpdates()
                         isFirstRun = false
                     } else {
                         notificationBuilder.setContentText("Tracking your run...")
                         notificationBuilder.setSmallIcon(R.drawable.ic_play)
                         notificationManager.notify(1, notificationBuilder.build())
                     }
+                    addEmptyPolyline()
                     startTimer()
                 }
                 "ACTION_PAUSE_SERVICE" -> pauseService()
@@ -97,9 +102,10 @@ class TrackingService : Service() {
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
             super.onLocationResult(result)
-            if (isTracking.value == true) {
-                result.locations.let { locations ->
-                    for (location in locations) {
+            result.locations.let { locations ->
+                for (location in locations) {
+                    currentLocation.postValue(location)
+                    if (isTracking.value == true && location.accuracy < 20f) {
                         addPathPoint(location)
                     }
                 }
@@ -107,31 +113,27 @@ class TrackingService : Service() {
         }
     }
 
-    private fun addPathPoint(location: Location?) {
+    private fun addPathPoint(location: android.location.Location?) {
         location?.let {
-            val pos = GeoPoint(it.latitude, it.longitude)
+            val pos = GeoPoint(location.latitude, location.longitude)
             pathPoints.value?.apply {
-                add(pos)
+                last().add(pos)
                 pathPoints.postValue(this)
             }
         }
     }
 
-    // START/STOP REQUESTING GPS COORDS BASED ON PLAY/PAUSE
     @SuppressLint("MissingPermission")
-    private fun updateLocationTracking(isTracking: Boolean) {
-        if (isTracking) {
-            val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000L)
-                .setMinUpdateIntervalMillis(2000L)
-                .build()
-            fusedLocationProviderClient.requestLocationUpdates(
-                request,
-                locationCallback,
-                Looper.getMainLooper()
-            )
-        } else {
-            fusedLocationProviderClient.removeLocationUpdates(locationCallback)
-        }
+    private fun startLocationUpdates() {
+        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000L)
+            .setMinUpdateIntervalMillis(2000L)
+            .build()
+
+        fusedLocationProviderClient.requestLocationUpdates(
+            request,
+            locationCallback,
+            Looper.getMainLooper()
+        )
     }
 
     private fun pauseService() {
@@ -146,15 +148,25 @@ class TrackingService : Service() {
 
 
     private fun killService() {
+        serviceKilled = true
+        isFirstRun = true
+
+        if (isTracking.value == false) {
+            timeRun = 0L
+            timeStarted = 0L
+            timeRunInMillis.postValue(0L)
+            pathPoints.postValue(mutableListOf())
+        }
+
+        fusedLocationProviderClient.removeLocationUpdates(locationCallback)
         isTracking.postValue(false)
         isTimerEnabled = false
-        postInitialValues() // Resets time back to 00:00
-        isFirstRun = true
         stopForeground(true)
-        stopSelf() // Tells the Android OS to completely destroy the service
+        stopSelf() // Tells the OS to completely destroy the service
     }
 
     private fun startTimer() {
+        serviceKilled = false
         isTracking.postValue(true)
         timeStarted = System.currentTimeMillis()
         isTimerEnabled = true
@@ -165,7 +177,16 @@ class TrackingService : Service() {
                 timeRunInMillis.postValue(timeRun + lapTime)
                 delay(50L)
             }
-            timeRun += (System.currentTimeMillis() - timeStarted)
+            if (serviceKilled) {
+                // The run stopped
+                timeRun = 0L
+                timeStarted = 0L
+                timeRunInMillis.postValue(0L)
+                pathPoints.postValue(mutableListOf())
+            } else {
+                // The run paused
+                timeRun += (System.currentTimeMillis() - timeStarted)
+            }
         }
     }
 

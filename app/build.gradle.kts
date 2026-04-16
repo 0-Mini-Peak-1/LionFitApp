@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     kotlin("plugin.serialization") version "1.9.22"
+    id("com.google.devtools.ksp")
 }
 
 val localProperties = Properties()
@@ -79,7 +80,7 @@ dependencies {
     val roomVersion = "2.8.4"
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
-    annotationProcessor("androidx.room:room-compiler:$roomVersion")
+    ksp("androidx.room:room-compiler:$roomVersion")
 
     // Lifecycle and ViewModel components for your UI data management
     val lifecycleVersion = "2.10.0"
@@ -103,7 +104,9 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:gotrue-kt:$supabaseVersion")    // For Authentication
 
     // Ktor Engine (Required for the Supabase client to make network calls)
-    implementation("io.ktor:ktor-client-android:3.4.1")
+    val ktorVersion = "2.3.12"
+    implementation("io.ktor:ktor-client-android:$ktorVersion")
+    implementation("io.ktor:ktor-client-core:$ktorVersion")
 
     // Converts Kotlin objects to JSON for Supabase
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0")

@@ -1,21 +1,30 @@
 package com.lionfit.app.data.database
 
 import com.lionfit.app.BuildConfig
+import com.lionfit.app.data.model.RunSession
 import io.github.jan.supabase.createSupabaseClient
-import io.github.jan.supabase.gotrue.Auth
 import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.postgrest.postgrest
 
 object SupabaseManager {
 
-    // This creates a single, global client using the secure keys we just set up
+    // Initialize the client using your secure keys
     val client = createSupabaseClient(
         supabaseUrl = BuildConfig.SUPABASE_URL,
         supabaseKey = BuildConfig.SUPABASE_ANON_KEY
     ) {
-        // Install the PostgreSQL database plugin
         install(Postgrest)
+    }
 
-        // Install the Authentication plugin
-        install(Auth)
+    // The Cloud Sync Function
+    suspend fun syncRunToCloud(runSession: RunSession): Boolean {
+        return try {
+            client.postgrest["run_sessions"].insert(runSession)
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // If the user is offline or the server rejects it, it safely returns false
+            false
+        }
     }
 }

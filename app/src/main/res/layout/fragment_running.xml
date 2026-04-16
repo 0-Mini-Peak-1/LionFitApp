@@ -15,11 +15,23 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
+    <View
+        android:id="@+id/view_lock_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#00000000" android:visibility="gone"
+        android:clickable="true"
+        android:focusable="true"
+        android:translationZ="10dp" />
+
     <androidx.cardview.widget.CardView
         android:id="@+id/stats_card"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:foreground="?attr/selectableItemBackground"
         app:cardCornerRadius="24dp"
         app:cardElevation="12dp"
         app:cardBackgroundColor="#FFFFFF"
@@ -76,46 +88,216 @@
                     android:layout_weight="1"
                     android:gravity="center"
                     android:orientation="vertical">
-                    <TextView android:id="@+id/tv_speed" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0.0" android:textSize="32sp" android:textStyle="bold" android:textColor="#000000"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Avg.speed(km/h)" android:textSize="12sp" android:textColor="#000000"/>
+                    <TextView android:id="@+id/tv_speed" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/pace" android:textSize="32sp" android:textStyle="bold" android:textColor="#000000"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Avg Pace" android:textSize="12sp" android:textColor="#000000"/>
                 </LinearLayout>
             </LinearLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:orientation="horizontal"
                 android:gravity="center"
-                android:orientation="horizontal">
+                android:layout_marginTop="16dp">
+
+                <FrameLayout
+                    android:id="@+id/layout_lock_container"
+                    android:layout_width="68dp"  android:layout_height="68dp"
+                    android:visibility="gone">
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/view_lock_circle"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        app:cardBackgroundColor="#000000"
+                        app:cardCornerRadius="34dp" app:cardElevation="0dp"
+                        android:scaleX="0"
+                        android:scaleY="0"
+                        android:alpha="0" />
+
+                    <ImageButton
+                        android:id="@+id/btn_lock"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:src="@drawable/ic_lock"
+                        android:scaleType="fitCenter"
+                        android:padding="18dp" android:background="@drawable/bg_circular_ripple"
+                        app:tint="#000000" />
+                </FrameLayout>
+
+                <Space android:layout_width="24dp" android:layout_height="wrap_content"/>
 
                 <ImageButton
-                    android:id="@+id/btn_pause"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:layout_marginEnd="32dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:src="@drawable/ic_pause"
-                    android:visibility="gone"
+                    android:id="@+id/btn_play_pause"
+                    android:layout_width="84dp"  android:layout_height="84dp"
+                    android:src="@drawable/ic_play"
+                    android:scaleType="fitCenter"
+                    android:padding="18dp" android:background="@drawable/bg_circular_ripple"
                     app:tint="#000000" />
 
-                <ImageButton
-                    android:id="@+id/btn_play"
-                    android:layout_width="64dp"
-                    android:layout_height="64dp"
-                    android:background="@drawable/ic_play"
-                    android:backgroundTint="#000000"
-                    app:tint="#FFFFFF" />
+                <Space android:layout_width="24dp" android:layout_height="wrap_content"/>
 
                 <ImageButton
                     android:id="@+id/btn_stop"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:layout_marginStart="32dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:layout_width="68dp"  android:layout_height="68dp"
                     android:src="@drawable/ic_stop"
+                    android:scaleType="fitCenter"
+                    android:padding="18dp" android:background="@drawable/bg_circular_ripple"
                     android:visibility="gone"
                     app:tint="#000000" />
+
             </LinearLayout>
         </LinearLayout>
     </androidx.cardview.widget.CardView>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/layout_expanded_stats"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#FFFFFF"
+        android:visibility="gone"
+        android:translationZ="15dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageButton
+            android:id="@+id/btn_minimize"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_margin="24dp"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="#000000"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            app:layout_constraintTop_toBottomOf="@id/btn_minimize"
+            app:layout_constraintBottom_toTopOf="@+id/layout_expanded_buttons">
+
+            <TextView
+                android:id="@+id/tv_distance_expanded"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0.00"
+                android:textSize="96sp"
+                android:textStyle="bold"
+                android:textColor="#000000" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Distance (km)"
+                android:textSize="18sp"
+                android:textColor="#555555"
+                android:layout_marginBottom="48dp"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="32dp"
+                android:weightSum="2">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:orientation="vertical">
+                    <TextView android:id="@+id/tv_timer_expanded" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="00:00" android:textSize="42sp" android:textStyle="bold" android:textColor="#000000"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Time" android:textColor="#555555"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:orientation="vertical">
+                    <TextView android:id="@+id/tv_speed_expanded" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0.0" android:textSize="42sp" android:textStyle="bold" android:textColor="#000000"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Avg Pace" android:textColor="#555555"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tv_calories_expanded"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textSize="42sp"
+                android:textStyle="bold"
+                android:textColor="#000000" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Calories (kcal)"
+                android:textColor="#555555"/>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/layout_expanded_buttons"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginBottom="48dp"
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <FrameLayout
+                android:id="@+id/layout_lock_container_expanded"
+                android:layout_width="68dp"
+                android:layout_height="68dp"
+                android:visibility="gone">
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/view_lock_circle_expanded"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    app:cardBackgroundColor="#000000"
+                    app:cardCornerRadius="34dp"
+                    app:cardElevation="0dp"
+                    android:scaleX="0" android:scaleY="0" android:alpha="0" />
+                <ImageButton
+                    android:id="@+id/btn_lock_expanded"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:src="@drawable/ic_lock"
+                    android:scaleType="fitCenter"
+                    android:padding="16dp"
+                    android:background="@drawable/bg_circular_ripple"
+                    app:tint="#000000" />
+            </FrameLayout>
+
+            <Space android:layout_width="24dp" android:layout_height="wrap_content"/>
+
+            <ImageButton
+                android:id="@+id/btn_play_pause_expanded"
+                android:layout_width="84dp"
+                android:layout_height="84dp"
+                android:src="@drawable/ic_play"
+                android:scaleType="fitCenter"
+                android:padding="18dp"
+                android:background="@drawable/bg_circular_ripple"
+                app:tint="#000000" />
+
+            <Space android:layout_width="24dp" android:layout_height="wrap_content"/>
+
+            <ImageButton
+                android:id="@+id/btn_stop_expanded"
+                android:layout_width="68dp"
+                android:layout_height="68dp"
+                android:src="@drawable/ic_stop"
+                android:scaleType="fitCenter"
+                android:padding="16dp"
+                android:background="@drawable/bg_circular_ripple"
+                android:visibility="gone"
+                app:tint="#000000" />
+        </LinearLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
 </androidx.constraintlayout.widget.ConstraintLayout>
