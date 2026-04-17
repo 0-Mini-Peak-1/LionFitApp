@@ -1,8 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <style name="Theme.LionFitApp" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-
         <item name="android:windowLightStatusBar">true</item>
+    </style>
 
+    <color name="lion_fit_yellow">#FFD600</color> <color name="save_button_black">#212121</color>
+    <color name="hint_grey">#9E9E9E</color>
+    <color name="text_grey_light">#757575</color>
+
+    <style name="TextAppearance.LionFit.Header" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@android:color/black</item>
+    </style>
+
+    <style name="TextAppearance.LionFit.StatValue" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@android:color/black</item>
+    </style>
+
+    <style name="TextAppearance.LionFit.StatLabel" parent="TextAppearance.Material3.LabelMedium">
+        <item name="android:textColor">@color/text_grey_light</item>
     </style>
 </resources>

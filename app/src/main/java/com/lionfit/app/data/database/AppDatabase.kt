@@ -9,37 +9,35 @@ import com.lionfit.app.data.model.DietLog
 import com.lionfit.app.data.model.RunSession
 import com.lionfit.app.data.model.SleepRecord
 
-// 1. List all your Entities here. If you add new tables later, you must add them to this array.
+// All entities are listed here
 @Database(
     entities = [RunSession::class, SleepRecord::class, DietLog::class],
-    version = 1,
+    version = 3,
     exportSchema = false
 )
-// 2. Tell Room to use the TypeConverter we made for the running map coordinates
+// Tell Room to use the TypeConverter made for the running map coordinates
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
-    // 3. Connect the DAOs
+    // Connect the DAOs
     abstract fun runDao(): RunDao
     abstract fun sleepDao(): SleepDao
     abstract fun dietDao(): DietDao
 
-    // 4. Create the Singleton instance
+    // Create the Singleton instance
     companion object {
         // @Volatile ensures that changes made by one thread are immediately visible to others
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
         fun getDatabase(context: Context): AppDatabase {
-            // If the INSTANCE is not null, return it. If it is, create the database.
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    "lionfit_database" // The name of your database file
+                    "LionFitDB"
                 )
-                    // Wipes and rebuilds the database if you change the schema (e.g., add a new column)
-                    // This is very handy during the development phase!
+
                     .fallbackToDestructiveMigration()
                     .build()
 

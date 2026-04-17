@@ -62,6 +62,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.preference.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -102,6 +103,7 @@ dependencies {
     val supabaseVersion = "2.2.3"
     implementation("io.github.jan-tennert.supabase:postgrest-kt:$supabaseVersion") // For Database
     implementation("io.github.jan-tennert.supabase:gotrue-kt:$supabaseVersion")    // For Authentication
+    implementation("io.github.jan-tennert.supabase:storage-kt:$supabaseVersion")
 
     // Ktor Engine (Required for the Supabase client to make network calls)
     val ktorVersion = "2.3.12"

@@ -146,18 +146,13 @@ class TrackingService : Service() {
 
     }
 
-
     private fun killService() {
         serviceKilled = true
         isFirstRun = true
-
-        if (isTracking.value == false) {
-            timeRun = 0L
-            timeStarted = 0L
-            timeRunInMillis.postValue(0L)
-            pathPoints.postValue(mutableListOf())
-        }
-
+        timeRun = 0L
+        timeStarted = 0L
+        timeRunInMillis.postValue(0L)
+        pathPoints.postValue(mutableListOf())
         fusedLocationProviderClient.removeLocationUpdates(locationCallback)
         isTracking.postValue(false)
         isTimerEnabled = false
@@ -192,11 +187,8 @@ class TrackingService : Service() {
 
     private fun startForegroundService() {
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel("tracking_channel", "Active Run Tracker", NotificationManager.IMPORTANCE_LOW)
-            notificationManager.createNotificationChannel(channel)
-        }
+        val channel = NotificationChannel("tracking_channel", "Active Run Tracker", NotificationManager.IMPORTANCE_LOW)
+        notificationManager.createNotificationChannel(channel)
         startForeground(1, notificationBuilder.build())
     }
 }

@@ -42,10 +42,15 @@ import kotlinx.coroutines.withContext
 import com.lionfit.app.data.database.AppDatabase
 import com.lionfit.app.data.database.RunDao
 import com.lionfit.app.data.database.SupabaseManager
+import com.lionfit.app.data.model.RoutePoint
 import com.lionfit.app.data.model.RunSession
+import androidx.fragment.app.activityViewModels
+import com.lionfit.app.ui.shared.RunSharedViewModel
+import com.lionfit.app.MainActivity
 
 class RunningFragment : Fragment(R.layout.fragment_running) {
     private lateinit var runDao: RunDao
+    private val sharedViewModel: RunSharedViewModel by activityViewModels()
     private lateinit var map: MapView
     private lateinit var tvTimer: TextView
     private lateinit var tvSpeed: TextView
@@ -205,58 +210,43 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
         }
     }
 
-    private fun endRunAndSave() {
+    private fun endRunAndNavigateToSave() {
         val duration = TrackingService.timeRunInMillis.value ?: 0L
         val distanceKm = runDistanceInMeters / 1000.0
 
-        // Prevent saving empty 0.00km runs if they just accidentally hit play/stop
         if (duration > 0L && distanceKm > 0.0) {
-
-            // Final Calculations
             val timeInMinutes = (duration / 1000f) / 60f
             val avgPace = timeInMinutes / distanceKm
             val calories = ((duration / 1000f) * 0.15f).toInt()
             val timestamp = System.currentTimeMillis()
+            val currentUserId = "a9572d27-53fc-473e-bec6-878b5742cb4f"
 
-            // TODO: Replace this with the actual Supabase Auth User ID later!
-            val currentUserId = "mock-user"
+            val rawPathPoints = TrackingService.pathPoints.value ?: mutableListOf()
+            val finalRoute = rawPathPoints.map { segment ->
+                segment.map { RoutePoint(it.latitude, it.longitude) }
+            }
 
-            // Package the data into Entity
             val session = RunSession(
                 userId = currentUserId,
                 timestamp = timestamp,
                 durationInMillis = duration,
                 distanceInKm = distanceKm,
                 averagePace = avgPace,
-                caloriesBurned = calories
+                caloriesBurned = calories,
+                pathCoordinates = finalRoute
             )
 
-            // Save to Room Database on a Background Thread (Dispatchers.IO)
-            lifecycleScope.launch(Dispatchers.IO) {
-                runDao.insertRun(session)
+            // Put the data in the memory
+            sharedViewModel.pendingRunSession.value = session
 
-                // Show a success message back on the Main UI thread
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(requireContext(), "Run saved locally!", Toast.LENGTH_SHORT).show()
-                }
+            // Switch the screen to the Save Form
+            (requireActivity() as MainActivity).switchFragment("save_activity")
 
-                // Attempt the Cloud Sync
-                val isSynced = SupabaseManager.syncRunToCloud(session)
-
-                withContext(Dispatchers.Main) {
-                    if (isSynced) {
-                        Toast.makeText(requireContext(), "Cloud Sync Successful \uD83D\uDE80", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(requireContext(), "Cloud Sync Failed. Will retry later.", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            }
         } else {
             Toast.makeText(requireContext(), "Run too short to save.", Toast.LENGTH_SHORT).show()
+            // Just kill the service if it was a mistake
+            sendCommandToService("ACTION_STOP_SERVICE")
         }
-
-        // kill the service and wipe the UI!
-        sendCommandToService("ACTION_STOP_SERVICE")
     }
 
     private fun toggleScreenLock() {
@@ -383,7 +373,7 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
         AlertDialog.Builder(requireContext())
             .setTitle("Do you want to stop tracking?")
             .setPositiveButton("Confirm") { _, _ ->
-                endRunAndSave()
+                endRunAndNavigateToSave()
             }
             .setNegativeButton("Cancel") { dialogInterface, _ ->
                 dialogInterface.dismiss()
