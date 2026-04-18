@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@android:color/white">
+
+    <!-- Back arrow + Title -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="16dp">
+
+        <ImageButton
+            android:id="@+id/btnBack"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/cd_back" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/title_add_drink"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#212121" />
+
+        <View android:layout_width="48dp" android:layout_height="1dp" />
+    </LinearLayout>
+
+    <!-- Amount Display -->
+    <TextView
+        android:id="@+id/tvWaterAmount"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="0 ml"
+        android:textSize="48sp"
+        android:textStyle="bold"
+        android:textColor="#212121"
+        android:layout_marginBottom="20dp" />
+
+    <!-- Preset Chips -->
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/chipGroupWater"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:singleSelection="true"
+        android:layout_marginBottom="20dp" />
+
+    <!-- Add Button -->
+    <Button
+        android:id="@+id/btnAddWaterConfirm"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:text="@string/btn_add"
+        android:backgroundTint="#212121"
+        android:textColor="@android:color/white"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Number Pad -->
+    <GridLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:columnCount="3"
+        android:rowCount="4">
+
+        <Button android:id="@+id/btn1" style="@style/NumPadButton" android:text="1" android:layout_columnWeight="1" />
+        <Button android:id="@+id/btn2" style="@style/NumPadButton" android:text="2" android:layout_columnWeight="1" />
+        <Button android:id="@+id/btn3" style="@style/NumPadButton" android:text="3" android:layout_columnWeight="1" />
+        <Button android:id="@+id/btn4" style="@style/NumPadButton" android:text="4" android:layout_columnWeight="1" />
+        <Button android:id="@+id/btn5" style="@style/NumPadButton" android:text="5" android:layout_columnWeight="1" />
+        <Button android:id="@+id/btn6" style="@style/NumPadButton" android:text="6" android:layout_columnWeight="1" />
+        <Button android:id="@+id/btn7" style="@style/NumPadButton" android:text="7" android:layout_columnWeight="1" />
+        <Button android:id="@+id/btn8" style="@style/NumPadButton" android:text="8" android:layout_columnWeight="1" />
+        <Button android:id="@+id/btn9" style="@style/NumPadButton" android:text="9" android:layout_columnWeight="1" />
+        <View android:layout_width="0dp" android:layout_height="0dp" android:layout_columnWeight="1" />
+        <Button android:id="@+id/btn0" style="@style/NumPadButton" android:text="0" android:layout_columnWeight="1" />
+        <Button android:id="@+id/btnBackspace" style="@style/NumPadButton" android:text="⌫" android:layout_columnWeight="1" />
+
+    </GridLayout>
+
+</LinearLayout>

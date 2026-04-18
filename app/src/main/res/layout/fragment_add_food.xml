@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#F5F5F5">
+
+    <!-- Yellow Top Bar -->
+
+    <!-- Meal Title -->
+    <TextView
+        android:id="@+id/tvMealTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Breakfast"
+        android:gravity="center"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="#212121"
+        android:paddingTop="12dp"
+        android:paddingBottom="8dp" />
+
+    <!-- Macro Chips -->
+    <com.google.android.material.chip.ChipGroup
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="8dp"
+        app:singleLine="true">
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipCal"
+            style="@style/Widget.Material3.Chip.Suggestion"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0 cal"
+            app:chipBackgroundColor="#FFF9C4"
+            android:textColor="#F57F17" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipF"
+            style="@style/Widget.Material3.Chip.Suggestion"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="F 0"
+            app:chipBackgroundColor="#FCE4EC"
+            android:textColor="#C62828" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipC"
+            style="@style/Widget.Material3.Chip.Suggestion"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="C 0"
+            app:chipBackgroundColor="#E8F5E9"
+            android:textColor="#2E7D32" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipP"
+            style="@style/Widget.Material3.Chip.Suggestion"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="P 0"
+            app:chipBackgroundColor="#E3F2FD"
+            android:textColor="#1565C0" />
+
+    </com.google.android.material.chip.ChipGroup>
+
+    <!-- Food Results -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvFoodResults"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:paddingHorizontal="16dp"
+        android:paddingBottom="8dp" />
+
+    <!-- Bottom Search Bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@android:color/white"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp"
+        android:elevation="8dp">
+
+        <ImageButton
+            android:id="@+id/btnBack"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@android:drawable/ic_input_add"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/cd_back" />
+
+        <androidx.appcompat.widget.SearchView
+            android:id="@+id/searchFood"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            app:queryHint="@string/hint_search_food"
+            app:iconifiedByDefault="false" />
+
+        <ImageButton
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@android:drawable/ic_menu_camera"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/cd_scan" />
+
+    </LinearLayout>
+
+</LinearLayout>

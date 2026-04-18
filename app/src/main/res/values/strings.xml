@@ -1,4 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- App -->
     <string name="app_name">LionFitApp</string>
-    <string name="pace">"--'--\""</string>
+    <string name="pace">"--\'--\""</string>
+    <string name="app_name_display">Lion.fit</string>
+
+    <!-- Content Descriptions -->
+    <string name="cd_profile">Profile picture</string>
+    <string name="cd_water">Water icon</string>
+    <string name="cd_back">Back</string>
+    <string name="cd_scan">Scan barcode</string>
+
+    <!-- Labels -->
+    <string name="calorie_for_today">Calorie for to day</string>
+    <string name="label_eaten">eaten</string>
+    <string name="label_kcal_left">kcal left</string>
+    <string name="label_kcal_over">kcal over</string>
+    <string name="label_goal">goal</string>
+    <string name="label_water">Water</string>
+    <string name="label_breakfast">Breakfast</string>
+    <string name="label_lunch">Lunch</string>
+    <string name="label_dinner">Dinner</string>
+    <string name="label_snack">Snack</string>
+    <string name="title_add_drink">Add Drink</string>
+    <string name="placeholder_food_name">ชื่ออาหาร</string>
+    <string name="placeholder_meal_type">Lunch</string>
+    <string name="placeholder_calories">0 kcal</string>
+
+    <!-- Default values -->
+    <string name="value_zero">0</string>
+    <string name="default_kcal">2,022</string>
+    <string name="default_water">0 / 2,000 ml</string>
+
+    <!-- Buttons -->
+    <string name="btn_add">Add</string>
+
+    <!-- Toasts -->
+    <string name="toast_open_food_search">เปิดหน้าค้นหาอาหาร...</string>
+    <string name="toast_add_water">เพิ่มน้ำ...</string>
+
+    <!-- Hints -->
+    <string name="hint_search_food">Search food...</string>
+
+    <!-- Formats -->
+    <string name="format_kcal">%d kcal</string>
+    <string name="format_ml">%d ml</string>
+    <string name="format_water_amount">%d / 2,000 ml</string>
+
+    <!-- Macro chips -->
+    <string name="chip_cal">%d cal</string>
+    <string name="chip_fat">F %d</string>
+    <string name="chip_carb">C %d</string>
+    <string name="chip_protein">P %d</string>
+    <string name="chip_cal_short">%d cal</string>
+    <string name="chip_fat_short">F %d</string>
+    <string name="chip_carb_short">C %d</string>
+    <string name="chip_protein_short">P %d</string>
 </resources>

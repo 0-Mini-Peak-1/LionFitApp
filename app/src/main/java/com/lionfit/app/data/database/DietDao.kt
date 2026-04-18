@@ -12,7 +12,9 @@ interface DietDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDietLog(dietLog: DietLog)
 
-    // Useful for calculating total calories consumed on a specific day
+    @Query("SELECT * FROM diet_logs_table ORDER BY dateLogged DESC")
+    fun getAllDietLogs(): Flow<List<DietLog>>
+
     @Query("SELECT SUM(calories) FROM diet_logs_table WHERE dateLogged = :targetDate")
     fun getTotalCaloriesForDate(targetDate: Long): Flow<Int>
 }

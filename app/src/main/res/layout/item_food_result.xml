@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginVertical="4dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="0dp"
+    app:strokeWidth="1dp"
+    app:strokeColor="#E0E0E0">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="12dp">
+
+        <!-- Food name -->
+        <TextView
+            android:id="@+id/tvFoodResultName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Food Name"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:textColor="#212121"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/btnAddFood"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <!-- Macro chips row -->
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chipGroupMacro"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            app:singleLine="true"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/btnAddFood"
+            app:layout_constraintTop_toBottomOf="@id/tvFoodResultName">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipResultCal"
+                style="@style/Widget.Material3.Chip.Suggestion"
+                android:layout_width="wrap_content"
+                android:layout_height="24dp"
+                android:text="0 cal"
+                app:chipMinHeight="24dp"
+                android:textSize="11sp"
+                app:chipBackgroundColor="#FFF9C4"
+                android:textColor="#F57F17" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipResultFat"
+                style="@style/Widget.Material3.Chip.Suggestion"
+                android:layout_width="wrap_content"
+                android:layout_height="24dp"
+                android:text="F 0"
+                app:chipMinHeight="24dp"
+                android:textSize="11sp"
+                app:chipBackgroundColor="#FCE4EC"
+                android:textColor="#C62828" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipResultCarb"
+                style="@style/Widget.Material3.Chip.Suggestion"
+                android:layout_width="wrap_content"
+                android:layout_height="24dp"
+                android:text="C 0"
+                app:chipMinHeight="24dp"
+                android:textSize="11sp"
+                app:chipBackgroundColor="#E8F5E9"
+                android:textColor="#2E7D32" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipResultProtein"
+                style="@style/Widget.Material3.Chip.Suggestion"
+                android:layout_width="wrap_content"
+                android:layout_height="24dp"
+                android:text="P 0"
+                app:chipMinHeight="24dp"
+                android:textSize="11sp"
+                app:chipBackgroundColor="#E3F2FD"
+                android:textColor="#1565C0" />
+
+        </com.google.android.material.chip.ChipGroup>
+
+        <!-- Serving info -->
+        <TextView
+            android:id="@+id/tvServing"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="100g / 1 serving"
+            android:textSize="12sp"
+            android:textColor="#9E9E9E"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/btnAddFood"
+            app:layout_constraintTop_toBottomOf="@id/chipGroupMacro" />
+
+        <!-- Add button -->
+        <ImageButton
+            android:id="@+id/btnAddFood"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@android:drawable/ic_input_add"
+            android:background="@android:color/transparent"
+            android:contentDescription="@string/btn_add"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</com.google.android.material.card.MaterialCardView>
