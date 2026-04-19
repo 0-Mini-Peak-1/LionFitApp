@@ -26,6 +26,8 @@ import com.lionfit.app.ui.running.SaveActivityFragment
 import com.lionfit.app.ui.history.RunHistoryFragment
 import com.lionfit.app.ui.auth.AuthFragment
 import com.lionfit.app.ui.profile.ProfileFragment
+import com.lionfit.app.ui.diet.DietFragment
+
 class MainActivity : AppCompatActivity() {
 
     private val sharedViewModel: SharedViewModel by viewModels()
@@ -160,5 +162,4 @@ class MainActivity : AppCompatActivity() {
 
 // --- PLACEHOLDER FRAGMENTS ---
 class DashboardFragment : Fragment(R.layout.fragment_placeholder)
-class DietFragment : Fragment(R.layout.fragment_placeholder)
 class SleepFragment : Fragment(R.layout.fragment_placeholder)
