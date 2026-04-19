@@ -10,7 +10,7 @@ import com.lionfit.app.R
 import com.lionfit.app.data.database.AppDatabase
 import com.lionfit.app.data.database.SupabaseManager
 import com.lionfit.app.MainActivity
-import com.lionfit.app.ui.shared.RunSharedViewModel
+import com.lionfit.app.ui.shared.SharedViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -22,18 +22,19 @@ import com.google.android.material.button.MaterialButton
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.overlay.Polyline
-import android.graphics.Color
 import com.lionfit.app.data.model.RunSession
 import org.osmdroid.config.Configuration
 import org.osmdroid.views.MapView
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import java.io.ByteArrayOutputStream
 
-// TODO: Clear this file's draft comments
 class SaveActivityFragment : Fragment(R.layout.fragment_save_activity) {
 
     // Tap into SharedViewModel
-    private val sharedViewModel: RunSharedViewModel by activityViewModels()
+    private val sharedViewModel: SharedViewModel by activityViewModels()
 
-    // Draft layout variables
+    // Layout variables
     private lateinit var map: MapView
     private lateinit var etTitle: EditText
     private lateinit var etDescription: EditText
@@ -62,14 +63,66 @@ class SaveActivityFragment : Fragment(R.layout.fragment_save_activity) {
 
         btnSave.setOnClickListener {
             val currentSession = sharedViewModel.pendingRunSession.value
+
             if (currentSession != null) {
-                saveFinalRunData(currentSession)
+                btnSave.isEnabled = false
+                btnSave.text = "Saving..."
+
+                val etTitle = view.findViewById<EditText>(R.id.etActivityTitle)
+                val etDescription = view.findViewById<EditText>(R.id.etActivityDescription)
+                val spinnerActivityType = view.findViewById<Spinner>(R.id.spinnerActivityType)
+                val userTitle = etTitle.text.toString().trim()
+                val finalTitle = if (userTitle.isNotEmpty()) userTitle else "Today's Activity"
+                val selectedType = spinnerActivityType.selectedItem.toString()
+                val descriptionText = etDescription.text.toString().trim()
+
+                // Launch a coroutine because uploading takes a second
+                lifecycleScope.launch {
+                    try {
+                        // Snap the picture
+                        val imageBytes = captureMapScreenshot(map)
+                        var mapImageUrl: String? = null
+
+                        // Upload to storage
+                        if (imageBytes != null) {
+                            mapImageUrl = withContext(Dispatchers.IO) {
+                                SupabaseManager.uploadRunSnapshot(
+                                    userId = currentSession.userId,
+                                    timestamp = currentSession.timestamp,
+                                    imageBytes = imageBytes
+                                )
+                            }
+                        }
+
+                        // Attach URL to session
+                        val finalSessionToSave = currentSession.copy(
+                            title = finalTitle,
+                            description = descriptionText,
+                            activityType = selectedType,
+                            mapSnapshotUrl = mapImageUrl
+                        )
+                        saveFinalRunData(finalSessionToSave)
+
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        Toast.makeText(requireContext(), "Save failed: ${e.message}", Toast.LENGTH_LONG).show()
+                        // Re-enable the button if it fails so they can try again
+                        btnSave.isEnabled = true
+                        btnSave.text = "Save Activity"
+                    }
+                }
             }
         }
     }
 
     private fun initializeViews(view: View) {
         map = view.findViewById(R.id.map_history)
+
+        map.setTileSource(TileSourceFactory.MAPNIK)
+        map.setBuiltInZoomControls(false)
+        map.setMultiTouchControls(false) // Pinch to zoom
+        map.setOnTouchListener { _, _ -> true } // Lock user from moving the map
+
         etTitle = view.findViewById(R.id.etActivityTitle)
         etDescription = view.findViewById(R.id.etActivityDescription)
         spinnerType = view.findViewById(R.id.spinnerActivityType)
@@ -80,7 +133,6 @@ class SaveActivityFragment : Fragment(R.layout.fragment_save_activity) {
     }
 
     private fun setupSpinnerDraft() {
-        // Draft: Basic dropdown setup. We will map this back to Supabase "activity_type" later.
         val activities = arrayOf("Walk", "Run", "Ride")
         val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, activities)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
@@ -88,25 +140,24 @@ class SaveActivityFragment : Fragment(R.layout.fragment_save_activity) {
     }
 
     private fun draftSessionDataToUi(session: RunSession) {
-        // Draft: Populare the text labels with the math we already calculated
+        // Distance handling
         tvDistance.text = String.format("%.2f km", session.distanceInKm)
 
-        // Pace handling (e.g., convert 5.5 to 5:30/km for UI display)
-        val paceText = String.format("%.2f min/km", session.averagePace)
-        tvPace.text = paceText
+        // Pace handling
+        val rawPace = session.averagePace
+        val paceMinutes = rawPace.toInt()
+        val paceSeconds = ((rawPace - paceMinutes) * 60f).toInt()
+        val finalPaceString = String.format("%d'%02d\"", paceMinutes, paceSeconds)
+        tvPace.text = finalPaceString
 
-        // Time handling (convert millis to roughly Minutes)
+        // Time handling (convert millis to Minutes)
         val minutes = (session.durationInMillis / 1000) / 60
         tvTime.text = "$minutes Min"
 
-        // --- Draft: Drawing the path on the map ---
         draftPathToMiniMap(session)
     }
 
     private fun draftPathToMiniMap(session: RunSession) {
-        map.setTileSource(TileSourceFactory.MAPNIK)
-        map.setMultiTouchControls(false)
-        map.controller.setZoom(16.0)
         map.overlays.clear()
 
         val allPointsForCamera = mutableListOf<GeoPoint>()
@@ -128,38 +179,62 @@ class SaveActivityFragment : Fragment(R.layout.fragment_save_activity) {
         if (allPointsForCamera.isNotEmpty()) {
             map.post {
                 val boundingBox = org.osmdroid.util.BoundingBox.fromGeoPoints(allPointsForCamera)
-                map.zoomToBoundingBox(boundingBox, false, 100)
+                val diagonalDistance = boundingBox.diagonalLengthInMeters
+
+                if (diagonalDistance < 50.0) {
+                    // If the run was super short (or a single point), manually set a safe zoom
+                    map.controller.setZoom(19.0)
+                    map.controller.setCenter(allPointsForCamera.first())
+                } else {
+                    // Normal run, use the bounding box as usual
+                    map.zoomToBoundingBox(boundingBox, false, 50)
+                    // Restrict the max zoom just in case
+                    map.maxZoomLevel = 20.0
+                }
             }
         }
     }
 
-    private fun saveFinalRunData(session: com.lionfit.app.data.model.RunSession) {
-        // TODO: Later, grab the REAL text from your UI Input Fields
-        val uiTitle = "Night Walk" // e.g., titleEditText.text.toString()
-        val uiDescription = "Felt great!"
-        val uiType = "Walk"
-
-        // Make a copy of the session, but update it with the new UI strings
-        val finalSession = session.copy(
-            title = uiTitle,
-            description = uiDescription,
-            activityType = uiType
-        )
-
+    private fun saveFinalRunData(finalSession: com.lionfit.app.data.model.RunSession) {
         // Save it to Room and Supabase (Moved from RunningFragment)
         val runDao = AppDatabase.getDatabase(requireContext()).runDao()
 
         lifecycleScope.launch(Dispatchers.IO) {
             runDao.insertRun(finalSession)
-            val isSynced = SupabaseManager.syncRunToCloud(finalSession)
+            val isSynced = SupabaseManager.saveRunSession(finalSession)
 
             withContext(Dispatchers.Main) {
                 Toast.makeText(requireContext(), "Activity Saved!", Toast.LENGTH_SHORT).show()
                 sharedViewModel.pendingRunSession.value = null
                 // Kill the GPS Service
                 sendCommandToService("ACTION_STOP_SERVICE")
-                (requireActivity() as MainActivity).switchFragment("dashboard")
+                btnSave.isEnabled = true
+                btnSave.text = "Save Activity"
+                view?.findViewById<EditText>(R.id.etActivityTitle)?.text?.clear()
+                view?.findViewById<EditText>(R.id.etActivityDescription)?.text?.clear()
+                (requireActivity() as MainActivity).switchFragment("running")
             }
+        }
+    }
+
+    private fun captureMapScreenshot(mapView: MapView): ByteArray? {
+        // Safety check to ensure the map actually has a size
+        if (mapView.width == 0 || mapView.height == 0) return null
+
+        try {
+            val bitmap = Bitmap.createBitmap(mapView.width, mapView.height, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+
+            mapView.draw(canvas)
+
+            // Compression
+            val stream = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 70, stream)
+
+            return stream.toByteArray()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
         }
     }
 
