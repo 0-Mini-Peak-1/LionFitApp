@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="1080px"
+    android:layout_height="1080px"
+    android:background="#121212">
+
+    <ImageView
+        android:id="@+id/iv_share_map"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="600px"
+        android:layout_gravity="bottom"
+        android:background="@drawable/bg_fade_up" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:padding="60px">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="LIONFIT"
+            android:textColor="#FFA500"
+            android:textSize="40px"
+            android:textStyle="bold"
+            android:letterSpacing="0.2" />
+
+        <TextView
+            android:id="@+id/tv_share_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Morning Run"
+            android:textColor="#FFFFFF"
+            android:textSize="70px"
+            android:textStyle="bold"
+            android:layout_marginTop="20px"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="60px">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="DISTANCE" android:textColor="#AAAAAA" android:textSize="35px" android:textStyle="bold"/>
+                <TextView android:id="@+id/tv_share_distance" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="5.2 km" android:textColor="#FFFFFF" android:textSize="60px" android:textStyle="bold" android:layout_marginTop="10px"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="TIME" android:textColor="#AAAAAA" android:textSize="35px" android:textStyle="bold"/>
+                <TextView android:id="@+id/tv_share_time" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="25:30" android:textColor="#FFFFFF" android:textSize="60px" android:textStyle="bold" android:layout_marginTop="10px"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PACE" android:textColor="#AAAAAA" android:textSize="35px" android:textStyle="bold"/>
+                <TextView android:id="@+id/tv_share_pace" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="5'12&quot;" android:textColor="#FFFFFF" android:textSize="60px" android:textStyle="bold" android:layout_marginTop="10px"/>
+            </LinearLayout>
+
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

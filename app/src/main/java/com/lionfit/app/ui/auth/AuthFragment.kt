@@ -115,13 +115,12 @@ class AuthFragment : Fragment(R.layout.fragment_auth) {
                     // Success
                     withContext(Dispatchers.Main) {
                         Toast.makeText(requireContext(), "Welcome!", Toast.LENGTH_SHORT).show()
-
                         val mainActivity = requireActivity() as MainActivity
-                        mainActivity.findViewById<BottomNavigationView>(R.id.bottom_navigation).visibility = View.VISIBLE
-                        // Replace "R.id.top_bar" with your actual top bar ID from activity_main.xml
-                        mainActivity.findViewById<View>(R.id.top_bar)?.visibility = View.VISIBLE
 
-                        mainActivity.switchFragment("dashboard")
+                        mainActivity.findViewById<BottomNavigationView>(R.id.bottom_navigation).visibility = View.VISIBLE
+                        mainActivity.findViewById<View>(R.id.top_bar)?.visibility = View.VISIBLE
+                        (requireActivity() as MainActivity).refreshTopBarProfile()
+                        (requireActivity() as MainActivity).switchFragment("dashboard")
                     }
 
                 } catch (e: Exception) {

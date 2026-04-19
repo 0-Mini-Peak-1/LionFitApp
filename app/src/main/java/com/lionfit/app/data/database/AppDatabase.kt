@@ -12,7 +12,7 @@ import com.lionfit.app.data.model.SleepRecord
 // All entities are listed here
 @Database(
     entities = [RunSession::class, SleepRecord::class, DietLog::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 // Tell Room to use the TypeConverter made for the running map coordinates

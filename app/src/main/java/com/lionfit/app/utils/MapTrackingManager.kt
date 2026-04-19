@@ -14,17 +14,20 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
 import com.lionfit.app.R
+import org.osmdroid.views.overlay.compass.InternalCompassOrientationProvider
+import org.osmdroid.views.overlay.compass.IOrientationConsumer
+import org.osmdroid.views.overlay.compass.IOrientationProvider
 
-class MapTrackingManager(private val context: Context, private val map: MapView) : SensorEventListener {
+class MapTrackingManager(private val context: Context, private val map: MapView) : IOrientationConsumer {
 
     private val polylines = mutableListOf<Polyline>()
-
     private var userMarker: Marker? = null
     private var markerAnimator: ValueAnimator? = null
     private var isFirstLocationFix = true
-
-    private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-    private val rotationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
+    private val compassProvider = InternalCompassOrientationProvider(context)
+    private var currentSpeed: Float = 0f
+    private var hasGpsBearing: Boolean = false
+    private var gpsBearing: Float = 0f
 
     init {
         setupMarker()
@@ -35,11 +38,27 @@ class MapTrackingManager(private val context: Context, private val map: MapView)
         val drawable = ContextCompat.getDrawable(context, R.drawable.ic_blue_dot)
         userMarker?.icon = drawable
         userMarker?.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+        userMarker?.setOnMarkerClickListener { _, _ -> true }
         map.overlays.add(userMarker)
     }
 
-    fun updateLiveLocation(newPosition: GeoPoint, segments: List<List<GeoPoint>>, isTracking: Boolean) {
+    fun updateLiveLocation(
+        newPosition: GeoPoint,
+        segments: List<List<GeoPoint>>,
+        isTracking: Boolean,
+        speed: Float = 0f,
+        bearing: Float = 0f,
+        hasBearing: Boolean = false
+    ) {
         val marker = userMarker ?: return
+        currentSpeed = speed
+        hasGpsBearing = hasBearing
+        gpsBearing = bearing
+
+        // The hybrid architecture logic
+//        if (currentSpeed >= 1.5f && hasGpsBearing) {
+//            userMarker?.rotation = gpsBearing
+//        }
 
         while (polylines.size < segments.size) {
             val newPolyline = Polyline(map).apply {
@@ -61,7 +80,7 @@ class MapTrackingManager(private val context: Context, private val map: MapView)
 
         if (isFirstLocationFix) {
             userMarker?.position = newPosition
-            map.controller.setZoom(18.0)
+            map.controller.setZoom(19.0)
             map.controller.animateTo(newPosition)
             if (isTracking && activePolyline != null) {
                 activePolyline.setPoints(activeSegment)
@@ -107,7 +126,7 @@ class MapTrackingManager(private val context: Context, private val map: MapView)
 
     fun showInitialMarker(startPoint: GeoPoint) {
         userMarker?.position = startPoint
-        map.controller.setZoom(18.0)
+        map.controller.setZoom(19.0)
         map.controller.animateTo(startPoint)
         map.invalidate()
     }
@@ -121,32 +140,21 @@ class MapTrackingManager(private val context: Context, private val map: MapView)
     }
 
     fun startCompass() {
-        rotationSensor?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
-        }
+        compassProvider.startOrientationProvider(this)
     }
 
     fun stopCompass() {
-        sensorManager.unregisterListener(this)
+        compassProvider.stopOrientationProvider()
     }
 
-    override fun onSensorChanged(event: SensorEvent?) {
-        if (event?.sensor?.type == Sensor.TYPE_ROTATION_VECTOR) {
-            val rotationMatrix = FloatArray(9)
-            SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values)
-            val orientationAngles = FloatArray(3)
-            SensorManager.getOrientation(rotationMatrix, orientationAngles)
-
-            var azimuthDegrees = Math.toDegrees(orientationAngles[0].toDouble()).toFloat()
-            azimuthDegrees = (azimuthDegrees + 360) % 360
-
-            userMarker?.rotation = azimuthDegrees
-            map.invalidate()
-        }
-    }
-
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-        // We don't need to do anything here, but Android requires the function to exist.
+    override fun onOrientationChanged(orientation: Float, source: IOrientationProvider?) {
+        // TODO: I remove hybrid architecture for testing purpose
+//        if (currentSpeed < 1.5f || !hasGpsBearing) {
+//            userMarker?.rotation = -orientation
+//            map.post { map.invalidate() }
+//        }
+        userMarker?.rotation = -orientation
+        map.post { map.invalidate() }
     }
 }
 
