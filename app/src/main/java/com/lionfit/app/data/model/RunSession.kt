@@ -49,5 +49,8 @@ data class RunSession(
     val caloriesBurned: Int,
 
     @SerialName("path_coordinates")
-    val pathCoordinates: List<List<RoutePoint>>? = null
+    val pathCoordinates: List<List<RoutePoint>>? = null,
+
+    @SerialName("map_snapshot_url")
+    val mapSnapshotUrl: String? = null
 )

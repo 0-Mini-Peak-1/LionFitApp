@@ -21,6 +21,9 @@ import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import io.github.jan.supabase.gotrue.auth
+import androidx.fragment.app.activityViewModels
+import coil.load
+import com.lionfit.app.ui.shared.SharedViewModel
 
 class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
@@ -28,7 +31,7 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
     private var currentProfile: UserProfile? = null
     private var newProfilePictureBytes: ByteArray? = null
 
-    // Layout views (We'll use standard findViewById for simplicity here)
+    // Layout views
     private lateinit var llDisplayMode: LinearLayout
     private lateinit var llEditMode: LinearLayout
     private lateinit var ivProfilePicture: ImageView
@@ -52,6 +55,9 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
     private lateinit var etHeightEdit: EditText
     private lateinit var etWeightEdit: EditText
     private lateinit var btnChangePic: Button
+
+    // ViewModel
+    private val sharedViewModel: SharedViewModel by activityViewModels()
 
     // Contract to pick an image from the user's gallery
     private val pickImage = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -184,12 +190,14 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
         tvHeightDisplay.text = "${profile.heightCm} cm"
         tvWeightDisplay.text = "${profile.weightKg} kg"
 
-        // --- TODO: Load profile picture from URL ---
         if (profile.profilePicUrl != null) {
-            // Draft logic: Use an image library like Glide or Coil here later!
-            // ivProfilePicture.load(profile.profilePicUrl)
+            ivProfilePicture.load(profile.profilePicUrl) {
+                crossfade(true)
+                placeholder(R.drawable.ic_profile_placeholder)
+                error(R.drawable.ic_profile_placeholder)
+            }
         } else {
-            ivProfilePicture.setImageResource(R.drawable.ic_profile_placeholder) // Use a default drawable
+            ivProfilePicture.setImageResource(R.drawable.ic_profile_placeholder)
         }
     }
 
@@ -204,7 +212,8 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
                 // If the user selected a new picture, upload it first
                 if (newProfilePictureBytes != null) {
-                    finalPicUrl = SupabaseManager.uploadProfilePicture(currentProfile!!.id, newProfilePictureBytes!!)
+                    val rawUrl = SupabaseManager.uploadProfilePicture(currentProfile!!.id, newProfilePictureBytes!!)
+                    finalPicUrl = "$rawUrl?t=${System.currentTimeMillis()}"
                 }
 
                 // Build the final UserProfile object with the new UI data
@@ -215,7 +224,7 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
                     gender = etGenderEdit.text.toString().trim(),
                     heightCm = etHeightEdit.text.toString().toDoubleOrNull() ?: 0.0,
                     weightKg = etWeightEdit.text.toString().toDoubleOrNull() ?: 0.0,
-                    profilePicUrl = finalPicUrl // Use the new or old URL
+                    profilePicUrl = finalPicUrl
                 )
 
                 // Upload to Supabase
@@ -226,9 +235,9 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
                 bindProfileData(currentProfile!!)
                 toggleEditingMode(false) // Toggle back to display mode
                 newProfilePictureBytes = null // Reset the pending image
+                sharedViewModel.updatedProfilePicUrl.value = finalPicUrl
 
                 Toast.makeText(requireContext(), "Profile Updated!", Toast.LENGTH_SHORT).show()
-
             } catch (e: Exception) {
                 Toast.makeText(requireContext(), "Failed to save: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
             } finally {

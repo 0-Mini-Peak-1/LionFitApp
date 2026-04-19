@@ -42,6 +42,9 @@ class TrackingService : Service() {
         val isTracking = MutableLiveData<Boolean>()
         val pathPoints = MutableLiveData<MutableList<MutableList<GeoPoint>>>()
         val currentLocation = MutableLiveData<android.location.Location>()
+        const val ACTION_START_OR_RESUME_SERVICE = "ACTION_START_OR_RESUME_SERVICE"
+        const val ACTION_PAUSE_SERVICE = "ACTION_PAUSE_SERVICE"
+        const val ACTION_STOP_SERVICE = "ACTION_STOP_SERVICE"
     }
 
     private fun postInitialValues() {
@@ -76,7 +79,7 @@ class TrackingService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         intent?.let {
             when (it.action) {
-                "ACTION_START_OR_RESUME_SERVICE" -> {
+                ACTION_START_OR_RESUME_SERVICE -> {
                     if (isTracking.value == true) return START_STICKY
 
                     if (isFirstRun) {
@@ -91,8 +94,8 @@ class TrackingService : Service() {
                     addEmptyPolyline()
                     startTimer()
                 }
-                "ACTION_PAUSE_SERVICE" -> pauseService()
-                "ACTION_STOP_SERVICE" -> killService()
+                ACTION_PAUSE_SERVICE -> pauseService()
+                ACTION_STOP_SERVICE -> killService()
             }
         }
         return START_STICKY
@@ -104,10 +107,33 @@ class TrackingService : Service() {
             super.onLocationResult(result)
             result.locations.let { locations ->
                 for (location in locations) {
+                    // Always update current location
                     currentLocation.postValue(location)
-                    if (isTracking.value == true && location.accuracy < 20f) {
-                        addPathPoint(location)
+                    // If the timer is paused, stop drawing
+                    if (isTracking.value != true) {
+                        continue
                     }
+                    // The Drift Bouncer
+                    if (location.accuracy > 20f) continue
+                    // Grab the last point recorded
+                    val currentSegment = pathPoints.value?.last()
+                    val lastPoint = currentSegment?.lastOrNull()
+
+                    if (lastPoint != null) {
+                        // Calculate the distance between the last point and this new one
+                        val results = FloatArray(1)
+                        android.location.Location.distanceBetween(
+                            lastPoint.latitude, lastPoint.longitude,
+                            location.latitude, location.longitude,
+                            results
+                        )
+                        val distanceMoved = results[0]
+
+                        if (distanceMoved < 3f) {
+                            continue
+                        }
+                    }
+                    addPathPoint(location)
                 }
             }
         }

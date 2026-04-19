@@ -112,4 +112,10 @@ dependencies {
 
     // Converts Kotlin objects to JSON for Supabase
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0")
+
+    // Coil, modern, lightweight image loading standard
+    implementation("io.coil-kt:coil:2.6.0") // Add this!
+
+    // Pull to refresh library
+    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.2.0")
 }

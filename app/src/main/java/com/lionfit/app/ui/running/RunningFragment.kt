@@ -9,8 +9,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
-import androidx.core.content.ContextCompat
-import androidx.core.graphics.drawable.toBitmap
 import androidx.fragment.app.Fragment
 import com.lionfit.app.R
 import com.lionfit.app.services.TrackingService
@@ -20,37 +18,32 @@ import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
-import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
-import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
-import org.osmdroid.views.overlay.Polyline
-import android.graphics.Color
 import android.widget.FrameLayout
-import org.osmdroid.views.overlay.Marker
 import com.google.android.gms.location.LocationServices
-import android.animation.ValueAnimator
-import android.view.animation.LinearInterpolator
 import com.lionfit.app.utils.MapTrackingManager
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.Priority
 import android.os.Looper
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import com.lionfit.app.data.database.AppDatabase
 import com.lionfit.app.data.database.RunDao
 import com.lionfit.app.data.database.SupabaseManager
 import com.lionfit.app.data.model.RoutePoint
 import com.lionfit.app.data.model.RunSession
 import androidx.fragment.app.activityViewModels
-import com.lionfit.app.ui.shared.RunSharedViewModel
+import androidx.lifecycle.lifecycleScope
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.lionfit.app.ui.shared.SharedViewModel
 import com.lionfit.app.MainActivity
+import io.github.jan.supabase.gotrue.auth
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlin.random.Random
 
 class RunningFragment : Fragment(R.layout.fragment_running) {
     private lateinit var runDao: RunDao
-    private val sharedViewModel: RunSharedViewModel by activityViewModels()
+    private val sharedViewModel: SharedViewModel by activityViewModels()
     private lateinit var map: MapView
     private lateinit var tvTimer: TextView
     private lateinit var tvSpeed: TextView
@@ -86,6 +79,8 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
     private var runDistanceInMeters = 0f
     private lateinit var fusedLocationClient: com.google.android.gms.location.FusedLocationProviderClient
     private var isIdleTracking = false
+    // global average fallback
+    private var currentUserWeight: Double = 70.0
 
     private val idleLocationCallback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
@@ -100,8 +95,19 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
             if (isServiceDead) {
                 result.locations.lastOrNull()?.let { location ->
                     val point = GeoPoint(location.latitude, location.longitude)
-                    // Move the marker, but pass empty lists
-                    mapTrackingManager.updateLiveLocation(point, emptyList(), false)
+                    val speed = location.speed
+                    val bearing = location.bearing
+                    val hasBearing = location.hasBearing()
+
+                    // Move the marker with the hybrid parameters
+                    mapTrackingManager.updateLiveLocation(
+                        newPosition = point,
+                        segments = emptyList(),
+                        isTracking = false,
+                        speed = speed,
+                        bearing = bearing,
+                        hasBearing = hasBearing
+                    )
                 }
             }
         }
@@ -112,7 +118,7 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
     ) { permissions ->
         val fineLocationGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
         if (fineLocationGranted) {
-            enableUserLocationOnMap() // Enable once the permission is granted
+            startGpsPreview() // Enable once the permission is granted
         } else {
             Toast.makeText(requireContext(), "Location permission is required to track runs.", Toast.LENGTH_SHORT).show()
         }
@@ -172,42 +178,33 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
         // Initialize Database DAO
         runDao = AppDatabase.getDatabase(requireContext()).runDao()
 
-        // Check permissions the moment the Run tab opens
-        if (PermissionsHelper.hasLocationPermissions(requireContext())) {
-            enableUserLocationOnMap()
-        } else {
-            // Default center just in case they deny it
-            map.controller.setZoom(16.0)
-            map.controller.setCenter(GeoPoint(13.8256, 100.4485))
-
-            // Immediately pop up the permission request
-            requestLocationAndNotificationPermissions()
-        }
-
-        setupClickListeners()
-        subscribeToObservers()
-    }
-
-    @android.annotation.SuppressLint("MissingPermission")
-    private fun enableUserLocationOnMap() {
-        // Request continuous updates for the Fragment
-        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000L)
-            .setMinUpdateIntervalMillis(2000L)
-            .build()
-
-        fusedLocationClient.requestLocationUpdates(
-            request,
-            idleLocationCallback,
-            Looper.getMainLooper()
-        )
-        isIdleTracking = true
-
-        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-            location?.let {
-                val startPoint = GeoPoint(it.latitude, it.longitude)
-                mapTrackingManager.showInitialMarker(startPoint)
+        // Fetch user weight
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val currentUser = SupabaseManager.client.auth.currentUserOrNull()
+                if (currentUser != null) {
+                    val profile = SupabaseManager.getProfile(currentUser.id)
+                    // Only update if they actually entered a weight greater than 0
+                    if (profile != null && profile.weightKg > 0.0) {
+                        currentUserWeight = profile.weightKg
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
+
+        // Check permissions the moment the Run tab opens
+        if (PermissionsHelper.hasLocationPermissions(requireContext())) {
+            startGpsPreview()
+        } else {
+            // Default center just in case they deny it
+            map.controller.setZoom(19.0)
+            map.controller.setCenter(GeoPoint(13.8256, 100.4485))
+            requestLocationAndNotificationPermissions()
+        }
+        setupClickListeners()
+        subscribeToObservers()
     }
 
     private fun endRunAndNavigateToSave() {
@@ -217,9 +214,16 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
         if (duration > 0L && distanceKm > 0.0) {
             val timeInMinutes = (duration / 1000f) / 60f
             val avgPace = timeInMinutes / distanceKm
-            val calories = ((duration / 1000f) * 0.15f).toInt()
+            val calories = (distanceKm * currentUserWeight * 1.036).toInt()
             val timestamp = System.currentTimeMillis()
-            val currentUserId = "a9572d27-53fc-473e-bec6-878b5742cb4f"
+            val currentUser = SupabaseManager.client.auth.currentUserOrNull()
+            val currentUserId = currentUser?.id
+
+            // Safety net: If user session expired mid-run
+            if (currentUserId == null) {
+                Toast.makeText(requireContext(), "Error: Could not verify user identity. Please log in again.", Toast.LENGTH_LONG).show()
+                return
+            }
 
             val rawPathPoints = TrackingService.pathPoints.value ?: mutableListOf()
             val finalRoute = rawPathPoints.map { segment ->
@@ -239,6 +243,11 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
             // Put the data in the memory
             sharedViewModel.pendingRunSession.value = session
 
+            val pauseIntent = Intent(requireContext(), TrackingService::class.java).apply {
+                action = TrackingService.ACTION_PAUSE_SERVICE
+            }
+            requireContext().startService(pauseIntent)
+            resetToMiniCard()
             // Switch the screen to the Save Form
             (requireActivity() as MainActivity).switchFragment("save_activity")
 
@@ -246,6 +255,98 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
             Toast.makeText(requireContext(), "Run too short to save.", Toast.LENGTH_SHORT).show()
             // Just kill the service if it was a mistake
             sendCommandToService("ACTION_STOP_SERVICE")
+        }
+    }
+
+    // TODO: Remove simulateFakeRun() since this is only for testing.
+    private fun simulateFakeRun() {
+        // 1. Generate Realistic Core Stats
+        // Distance between 1.00 km and 12.00 km
+        val randomDistance = kotlin.math.round(Random.nextDouble(1.0, 12.0) * 100) / 100.0
+
+        // Pace between 4.5 (super fast) and 12.0 (walking pace) mins per km
+        val randomPace = kotlin.math.round(Random.nextDouble(4.5, 12.0) * 100) / 100.0
+
+        // Math: Time = Distance * Pace
+        val totalMinutes = randomDistance * randomPace
+        val randomDurationMillis = (totalMinutes * 60 * 1000).toLong()
+
+        // Math: Calories = ~70 kcals per km (with a slight random variation)
+        val randomCalories = (randomDistance * Random.nextInt(65, 85)).toInt()
+
+        // 2. Generate a random wandering GPS path
+        var currentLat = 13.9644
+        var currentLng = 100.5871
+        val numPoints = Random.nextInt(10, 30) // Random amount of GPS dots
+        val routePoints = mutableListOf<RoutePoint>()
+
+        for (i in 0 until numPoints) {
+            routePoints.add(RoutePoint(currentLat, currentLng))
+            // Add a tiny random offset (simulates moving about 10-50 meters in a random direction)
+            currentLat += Random.nextDouble(-0.001, 0.001)
+            currentLng += Random.nextDouble(-0.001, 0.001)
+        }
+
+        // Wrap it in the segment list
+        val mockPath = listOf(routePoints)
+
+        // 3. Build the fake finished session
+        val fakeSession = RunSession(
+            id = java.util.UUID.randomUUID().toString(),
+            userId = SupabaseManager.client.auth.currentUserOrNull()?.id ?: "",
+            // Randomize the start time between "right now" and "up to 3 days ago"
+            timestamp = System.currentTimeMillis() - Random.nextLong(0, 259200000),
+            durationInMillis = randomDurationMillis,
+            distanceInKm = randomDistance,
+            averagePace = randomPace,
+            caloriesBurned = randomCalories,
+            pathCoordinates = mockPath,
+            title = "",
+            description = "",
+            activityType = "Run",
+            mapSnapshotUrl = null // Starts null, your SaveActivity will fill it!
+        )
+
+        // 4. Inject it into the memory box and jump to the Save screen
+        sharedViewModel.pendingRunSession.value = fakeSession
+        val pauseIntent = Intent(requireContext(), TrackingService::class.java).apply {
+            action = TrackingService.ACTION_PAUSE_SERVICE
+        }
+        requireContext().startService(pauseIntent)
+        resetToMiniCard()
+        (requireActivity() as MainActivity).switchFragment("save_activity")
+    }
+
+    private fun resetToMiniCard() {
+        // Instantly snap everything back to the default mini state
+        layoutExpandedStats.visibility = View.GONE
+        layoutExpandedStats.alpha = 0f
+        layoutExpandedStats.scaleX = 0.9f
+        layoutExpandedStats.scaleY = 0.9f
+
+        statsCardMini.visibility = View.VISIBLE
+        statsCardMini.alpha = 1f
+    }
+
+    // This triggers whenever MainActivity hides or shows this fragment
+    override fun onHiddenChanged(hidden: Boolean) {
+        super.onHiddenChanged(hidden)
+        manageGpsBattery(isHidden = hidden)
+
+        if (!hidden) {
+            // Check if there is an active run that is currently paused
+            val isCurrentlyPaused = TrackingService.isTracking.value == false
+            val hasRunTime = (TrackingService.timeRunInMillis.value ?: 0L) > 0L
+
+            if (isCurrentlyPaused && hasRunTime) {
+                // Unfreeze the clock
+                val resumeIntent = Intent(requireContext(), TrackingService::class.java).apply {
+                    action = TrackingService.ACTION_START_OR_RESUME_SERVICE
+                }
+                requireContext().startService(resumeIntent)
+
+                Toast.makeText(requireContext(), "Run Resumed!", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -359,6 +460,12 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
             }
         }
 
+        val fabHistory = view?.findViewById<FloatingActionButton>(R.id.fabHistory)
+        fabHistory?.setOnClickListener {
+            // Shout to MainActivity to change the screen!
+            (requireActivity() as MainActivity).switchFragment("run_history")
+        }
+
         btnPlayPause.setOnClickListener { playPauseAction() }
         btnPlayPauseExpanded.setOnClickListener { playPauseAction() }
 
@@ -373,7 +480,7 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
         AlertDialog.Builder(requireContext())
             .setTitle("Do you want to stop tracking?")
             .setPositiveButton("Confirm") { _, _ ->
-                endRunAndNavigateToSave()
+                simulateFakeRun()
             }
             .setNegativeButton("Cancel") { dialogInterface, _ ->
                 dialogInterface.dismiss()
@@ -437,10 +544,6 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
             tvTimer.text = formattedTime
             tvTimerExpanded.text = formattedTime
 
-            // Calories Math
-            val caloriesBurned = ((timeInMillis / 1000f) * 0.15f).toInt()
-            tvCaloriesExpanded.text = caloriesBurned.toString()
-
             if (timeInMillis == 0L) {
                 updateButtonVisibility(TrackingService.isTracking.value ?: false)
             }
@@ -456,7 +559,19 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
             val segments = TrackingService.pathPoints.value ?: mutableListOf()
             val isTracking = TrackingService.isTracking.value ?: false
 
-            mapTrackingManager.updateLiveLocation(point, segments, isTracking)
+            val speed = location.speed
+            val bearing = location.bearing
+            val hasBearing = location.hasBearing()
+
+            // Move the marker with the hybrid parameters
+            mapTrackingManager.updateLiveLocation(
+                newPosition = point,
+                segments = segments,
+                isTracking = isTracking,
+                speed = speed,
+                bearing = bearing,
+                hasBearing = hasBearing
+            )
         }
 
         // Observe path point
@@ -467,6 +582,9 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
                 runDistanceInMeters = Calculators.calculatePolylineLength(segments)
                 val distanceInKm = runDistanceInMeters / 1000f
                 val formattedDistance = String.format("%.2f", distanceInKm)
+                // Calories Math
+                val liveCalories = (distanceInKm * currentUserWeight * 1.036).toInt()
+                tvCaloriesExpanded.text = liveCalories.toString()
 
                 tvDistance.text = formattedDistance
                 tvDistanceExpanded.text = formattedDistance
@@ -492,6 +610,7 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
                 // Reset math UI and clear the blue line(s)
                 mapTrackingManager.clearMapLines()
                 runDistanceInMeters = 0f
+                tvCaloriesExpanded.text = "0"
                 tvDistance.text = "0.00"
                 tvDistanceExpanded.text = "0.00"
                 tvSpeed.text = "--'--\""
@@ -504,16 +623,61 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
         super.onResume()
         map.onResume()
         mapTrackingManager.startCompass()
-        if (PermissionsHelper.hasLocationPermissions(requireContext())) {
-            enableUserLocationOnMap()
-        }
+        manageGpsBattery(isHidden = false)
     }
 
     override fun onPause() {
         super.onPause()
         map.onPause()
         mapTrackingManager.stopCompass()
+        manageGpsBattery(isHidden = true)
+    }
 
+    private fun manageGpsBattery(isHidden: Boolean) {
+        // SAFETY CHECK: Are we currently in the middle of a workout?
+        val isActivelyRunning = TrackingService.isTracking.value ?: false
+
+        if (isActivelyRunning) {
+            return
+        }
+
+        if (isHidden) {
+            // User switched to Account Tab or locked phone. Kill the preview to save battery!
+            stopGpsPreview()
+        } else {
+            // User is looking at the map waiting to run. Wake up the GPS!
+            startGpsPreview()
+        }
+    }
+
+    @android.annotation.SuppressLint("MissingPermission")
+    private fun startGpsPreview() {
+        if (!PermissionsHelper.hasLocationPermissions(requireContext())) return
+
+        // Only start it if it isn't already running
+        if (!isIdleTracking) {
+            val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000L)
+                .setMinUpdateIntervalMillis(2000L)
+                .build()
+
+            fusedLocationClient.requestLocationUpdates(
+                request,
+                idleLocationCallback,
+                Looper.getMainLooper()
+            )
+            isIdleTracking = true
+
+            // Snap the map to them instantly
+            fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+                location?.let {
+                    val startPoint = GeoPoint(it.latitude, it.longitude)
+                    mapTrackingManager.showInitialMarker(startPoint)
+                }
+            }
+        }
+    }
+
+    private fun stopGpsPreview() {
         if (isIdleTracking) {
             fusedLocationClient.removeLocationUpdates(idleLocationCallback)
             isIdleTracking = false
