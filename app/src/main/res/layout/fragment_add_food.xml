@@ -21,51 +21,17 @@
         android:paddingTop="12dp"
         android:paddingBottom="8dp" />
 
-    <!-- Macro Chips -->
-    <com.google.android.material.chip.ChipGroup
+    <!-- Cal Chip only -->
+    <com.google.android.material.chip.Chip
+        android:id="@+id/chipCal"
+        style="@style/Widget.MaterialComponents.Chip.Action"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
         android:layout_marginBottom="8dp"
-        app:singleLine="true">
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipCal"
-            style="@style/Widget.Material3.Chip.Suggestion"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="0 cal"
-            app:chipBackgroundColor="#FFF9C4"
-            android:textColor="#F57F17" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipF"
-            style="@style/Widget.Material3.Chip.Suggestion"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="F 0"
-            app:chipBackgroundColor="#FCE4EC"
-            android:textColor="#C62828" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipC"
-            style="@style/Widget.Material3.Chip.Suggestion"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="C 0"
-            app:chipBackgroundColor="#E8F5E9"
-            android:textColor="#2E7D32" />
-
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipP"
-            style="@style/Widget.Material3.Chip.Suggestion"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="P 0"
-            app:chipBackgroundColor="#E3F2FD"
-            android:textColor="#1565C0" />
-
-    </com.google.android.material.chip.ChipGroup>
+        android:text="0 cal"
+        app:chipBackgroundColor="#FFF9C4"
+        android:textColor="#F57F17" />
 
     <!-- Food Results -->
     <androidx.recyclerview.widget.RecyclerView
@@ -94,9 +60,18 @@
             android:id="@+id/btnBack"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:src="@android:drawable/ic_input_add"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/cd_back" />
+
+        <Button
+            android:id="@+id/btnDone"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_done"
+            android:textColor="#212121"
+            android:textStyle="bold" />
 
         <androidx.appcompat.widget.SearchView
             android:id="@+id/searchFood"

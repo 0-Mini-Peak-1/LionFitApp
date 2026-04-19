@@ -12,6 +12,35 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
+        <!-- Yellow Header Bar with Date Selection -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="#FFC107"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="16dp">
+
+            <TextView
+                android:id="@+id/tvSelectedDate"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="Today"
+                android:textColor="#212121"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                app:drawableEndCompat="@drawable/ic_calendar"
+                android:drawablePadding="8dp"
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackground" />
+
+        </LinearLayout>
+
         <!-- Calorie Summary Section -->
         <LinearLayout
             android:layout_width="match_parent"
@@ -207,8 +236,7 @@
                     android:layout_height="40dp"
                     android:layout_marginEnd="12dp"
                     android:contentDescription="@string/cd_water"
-                    android:src="@android:drawable/ic_menu_save"
-                    app:tint="#29B6F6" />
+                    android:src="@drawable/ic_water_drop" />
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -262,28 +290,42 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="16dp"
-                android:gravity="center_vertical">
+                android:orientation="vertical">
 
-                <TextView
-                    android:layout_width="0dp"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/label_breakfast"
-                    android:textColor="#212121"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical">
 
-                <Button
-                    android:id="@+id/btnAddBreakfast"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="36dp"
-                    android:text="@string/btn_add"
-                    android:textColor="#212121"
-                    app:strokeColor="#E0E0E0"
-                    app:cornerRadius="8dp" />
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/label_breakfast"
+                        android:textColor="#212121"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <Button
+                        android:id="@+id/btnAddBreakfast"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="@string/btn_add"
+                        android:textColor="#212121"
+                        app:strokeColor="#E0E0E0"
+                        app:cornerRadius="8dp" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/llBreakfastItems"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingBottom="8dp" />
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -303,28 +345,42 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="16dp"
-                android:gravity="center_vertical">
+                android:orientation="vertical">
 
-                <TextView
-                    android:layout_width="0dp"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/label_lunch"
-                    android:textColor="#212121"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical">
 
-                <Button
-                    android:id="@+id/btnAddLunch"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="36dp"
-                    android:text="@string/btn_add"
-                    android:textColor="#212121"
-                    app:strokeColor="#E0E0E0"
-                    app:cornerRadius="8dp" />
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/label_lunch"
+                        android:textColor="#212121"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <Button
+                        android:id="@+id/btnAddLunch"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="@string/btn_add"
+                        android:textColor="#212121"
+                        app:strokeColor="#E0E0E0"
+                        app:cornerRadius="8dp" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/llLunchItems"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingBottom="8dp" />
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -344,28 +400,42 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="16dp"
-                android:gravity="center_vertical">
+                android:orientation="vertical">
 
-                <TextView
-                    android:layout_width="0dp"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/label_dinner"
-                    android:textColor="#212121"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical">
 
-                <Button
-                    android:id="@+id/btnAddDinner"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="36dp"
-                    android:text="@string/btn_add"
-                    android:textColor="#212121"
-                    app:strokeColor="#E0E0E0"
-                    app:cornerRadius="8dp" />
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/label_dinner"
+                        android:textColor="#212121"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <Button
+                        android:id="@+id/btnAddDinner"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="@string/btn_add"
+                        android:textColor="#212121"
+                        app:strokeColor="#E0E0E0"
+                        app:cornerRadius="8dp" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/llDinnerItems"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingBottom="8dp" />
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -386,28 +456,42 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="16dp"
-                android:gravity="center_vertical">
+                android:orientation="vertical">
 
-                <TextView
-                    android:layout_width="0dp"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/label_snack"
-                    android:textColor="#212121"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical">
 
-                <Button
-                    android:id="@+id/btnAddSnack"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="36dp"
-                    android:text="@string/btn_add"
-                    android:textColor="#212121"
-                    app:strokeColor="#E0E0E0"
-                    app:cornerRadius="8dp" />
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/label_snack"
+                        android:textColor="#212121"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <Button
+                        android:id="@+id/btnAddSnack"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="@string/btn_add"
+                        android:textColor="#212121"
+                        app:strokeColor="#E0E0E0"
+                        app:cornerRadius="8dp" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/llSnackItems"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingBottom="8dp" />
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

@@ -15,100 +15,97 @@
         android:layout_height="wrap_content"
         android:padding="12dp">
 
-        <!-- Food name -->
         <TextView
             android:id="@+id/tvFoodResultName"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Food Name"
+            android:text="@string/placeholder_food_result_name"
             android:textSize="15sp"
             android:textStyle="bold"
             android:textColor="#212121"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/btnAddFood"
+            app:layout_constraintEnd_toStartOf="@id/layoutQuantity"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <!-- Macro chips row -->
-        <com.google.android.material.chip.ChipGroup
-            android:id="@+id/chipGroupMacro"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipResultCal"
+            android:layout_width="wrap_content"
+            android:layout_height="24dp"
+            android:text="@string/placeholder_cal"
+            android:textSize="11sp"
+            app:chipMinHeight="24dp"
+            app:chipBackgroundColor="#FFF9C4"
+            android:textColor="#F57F17"
             android:layout_marginTop="4dp"
-            app:singleLine="true"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/btnAddFood"
-            app:layout_constraintTop_toBottomOf="@id/tvFoodResultName">
+            app:layout_constraintTop_toBottomOf="@id/tvFoodResultName" />
 
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipResultCal"
-                style="@style/Widget.Material3.Chip.Suggestion"
-                android:layout_width="wrap_content"
-                android:layout_height="24dp"
-                android:text="0 cal"
-                app:chipMinHeight="24dp"
-                android:textSize="11sp"
-                app:chipBackgroundColor="#FFF9C4"
-                android:textColor="#F57F17" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipResultFat"
-                style="@style/Widget.Material3.Chip.Suggestion"
-                android:layout_width="wrap_content"
-                android:layout_height="24dp"
-                android:text="F 0"
-                app:chipMinHeight="24dp"
-                android:textSize="11sp"
-                app:chipBackgroundColor="#FCE4EC"
-                android:textColor="#C62828" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipResultCarb"
-                style="@style/Widget.Material3.Chip.Suggestion"
-                android:layout_width="wrap_content"
-                android:layout_height="24dp"
-                android:text="C 0"
-                app:chipMinHeight="24dp"
-                android:textSize="11sp"
-                app:chipBackgroundColor="#E8F5E9"
-                android:textColor="#2E7D32" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipResultProtein"
-                style="@style/Widget.Material3.Chip.Suggestion"
-                android:layout_width="wrap_content"
-                android:layout_height="24dp"
-                android:text="P 0"
-                app:chipMinHeight="24dp"
-                android:textSize="11sp"
-                app:chipBackgroundColor="#E3F2FD"
-                android:textColor="#1565C0" />
-
-        </com.google.android.material.chip.ChipGroup>
-
-        <!-- Serving info -->
         <TextView
             android:id="@+id/tvServing"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:text="100g / 1 serving"
+            android:text="@string/placeholder_serving"
             android:textSize="12sp"
             android:textColor="#9E9E9E"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/btnAddFood"
-            app:layout_constraintTop_toBottomOf="@id/chipGroupMacro" />
+            app:layout_constraintEnd_toStartOf="@id/layoutQuantity"
+            app:layout_constraintTop_toBottomOf="@id/chipResultCal" />
 
-        <!-- Add button -->
-        <ImageButton
-            android:id="@+id/btnAddFood"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
-            android:src="@android:drawable/ic_input_add"
-            android:background="@android:color/transparent"
-            android:contentDescription="@string/btn_add"
+        <LinearLayout
+            android:id="@+id/layoutQuantity"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent" />
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <ImageButton
+                android:id="@+id/btnMinus"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@android:drawable/button_onoff_indicator_off"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Minus"
+                android:tint="#F44336" />
+
+            <LinearLayout
+                android:layout_width="60dp"
+                android:layout_height="40dp"
+                android:layout_marginHorizontal="4dp"
+                android:background="@drawable/bg_quantity_display"
+                android:gravity="center"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvQuantity"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="#212121" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="serving"
+                    android:textSize="10sp"
+                    android:textColor="#757575" />
+            </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/btnPlus"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@android:drawable/ic_input_add"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Plus"
+                android:tint="#4CAF50" />
+
+        </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </com.google.android.material.card.MaterialCardView>

@@ -11,17 +11,16 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.chip.Chip
 import com.lionfit.app.R
 import com.lionfit.app.data.database.AppDatabase
+import com.lionfit.app.data.database.SupabaseManager
 import com.lionfit.app.data.model.DietLog
+import io.github.jan.supabase.gotrue.auth
 import kotlinx.coroutines.launch
 
 class AddFoodFragment : Fragment(R.layout.fragment_add_food) {
 
     private val db by lazy { AppDatabase.getDatabase(requireContext()) }
     private lateinit var mealType: String
-
-    // Nutrition summary for selected meal
-    private var totalCal = 0; private var totalF = 0
-    private var totalC = 0;   private var totalP = 0
+    private var totalCal = 0
 
     companion object {
         fun newInstance(mealType: String) = AddFoodFragment().apply {
@@ -33,16 +32,15 @@ class AddFoodFragment : Fragment(R.layout.fragment_add_food) {
         super.onViewCreated(view, savedInstanceState)
         mealType = arguments?.getString("mealType") ?: "Breakfast"
 
-        // Header title = meal type
         view.findViewById<TextView>(R.id.tvMealTitle).text = mealType
+        updateCalChip(view)
 
-        // Macro chips
-        updateMacroChips(view)
-
-        // Search
         val searchView = view.findViewById<SearchView>(R.id.searchFood)
         val rvResults  = view.findViewById<RecyclerView>(R.id.rvFoodResults)
         rvResults.layoutManager = LinearLayoutManager(requireContext())
+
+        // แสดงรายการอาหารทั้งหมดทันทีเมื่อเปิดหน้า
+        searchFood("", rvResults, view)
 
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
@@ -50,63 +48,83 @@ class AddFoodFragment : Fragment(R.layout.fragment_add_food) {
                 return true
             }
             override fun onQueryTextChange(newText: String?): Boolean {
-                if ((newText?.length ?: 0) >= 2) searchFood(newText.orEmpty(), rvResults, view)
+                // ค้นหาทันทีที่พิมพ์ หรือถ้าลบจนว่างก็ให้โชว์ทั้งหมด
+                searchFood(newText.orEmpty(), rvResults, view)
                 return true
             }
         })
 
-        // Back
+        // Back button - Cancel (just pop back)
         view.findViewById<View>(R.id.btnBack).setOnClickListener {
+            parentFragmentManager.popBackStack()
+        }
+
+        // Done button — Save all and go back
+        view.findViewById<View>(R.id.btnDone).setOnClickListener {
+            saveAllSelectedFood()
+        }
+    }
+
+    private var allFoodResults = listOf<FoodResult>()
+
+    private fun searchFood(query: String, rv: RecyclerView, view: View) {
+        if (allFoodResults.isEmpty()) {
+            allFoodResults = listOf(
+                FoodResult("ผัดกะเพราเนื้อ", 347, "1 จาน / 151.5 กรัม"),
+                FoodResult("ข้าวมันไก่", 420, "1 จาน / 200 กรัม"),
+                FoodResult("ส้มตำไทย", 120, "1 จาน / 150 กรัม"),
+                FoodResult("ต้มยำกุ้ง", 210, "1 ถ้วย / 250 กรัม"),
+                FoodResult("แกงเขียวหวานไก่", 380, "1 ถ้วย / 200 กรัม"),
+                FoodResult("ข้าวผัดปู", 450, "1 จาน"),
+                FoodResult("ผัดไทยกุ้งสด", 480, "1 จาน"),
+                FoodResult("ข้าวไข่เจียว", 350, "1 จาน"),
+                FoodResult("อเมริกาโน่เย็น (ไม่หวาน)", 5, "1 แก้ว"),
+                FoodResult("ชาเขียวนมเย็น", 250, "1 แก้ว")
+            )
+        }
+
+        val filteredResults = allFoodResults.filter { it.name.contains(query, ignoreCase = true) }
+
+        rv.adapter = FoodResultAdapter(filteredResults) {
+            updateTotalCalories(view)
+        }
+    }
+
+    private fun updateTotalCalories(view: View) {
+        totalCal = allFoodResults.sumOf { it.calories * it.selectedQuantity }
+        updateCalChip(view)
+    }
+
+    private fun saveAllSelectedFood() {
+        val currentUserId = SupabaseManager.client.auth.currentUserOrNull()?.id ?: "anonymous"
+
+        lifecycleScope.launch {
+            allFoodResults.filter { it.selectedQuantity > 0 }.forEach { food ->
+                val dietLog = DietLog(
+                    userId = currentUserId,
+                    foodName = "${food.name} (x${food.selectedQuantity})",
+                    mealType = mealType,
+                    calories = food.calories * food.selectedQuantity,
+                    dateLogged = System.currentTimeMillis()
+                )
+                // Save to Local Room
+                db.dietDao().insertDietLog(dietLog)
+
+                // Sync to Cloud (Supabase)
+                SupabaseManager.syncDietToCloud(dietLog)
+            }
             parentFragmentManager.popBackStack()
         }
     }
 
-    private fun searchFood(query: String, rv: RecyclerView, view: View) {
-        // TODO: เชื่อม API ค้นหาอาหาร (เช่น Open Food Facts)
-        // ตอนนี้ใช้ mock data
-        val mockResults = listOf(
-            FoodResult("Pad Krapow with Beef", 347, 29f, 4f, 18f, "151.5g / 1 serving"),
-            FoodResult("Khao Man Gai", 420, 32f, 45f, 12f, "200g / 1 serving"),
-            FoodResult("Som Tum", 120, 5f, 18f, 3f, "150g / 1 serving")
-        ).filter { it.name.contains(query, ignoreCase = true) }
-
-        rv.adapter = FoodResultAdapter(mockResults) { food ->
-            addFoodToLog(food, view)
-        }
-    }
-
-    private fun addFoodToLog(food: FoodResult, view: View) {
-        lifecycleScope.launch {
-            db.dietDao().insertDietLog(
-                DietLog(
-                    foodName  = food.name,
-                    mealType  = mealType,
-                    calories  = food.calories,
-                    protein   = food.protein,
-                    carbs     = food.carbs,
-                    fat       = food.fat,
-                    dateLogged = System.currentTimeMillis()
-                )
-            )
-            totalCal += food.calories; totalF += food.fat.toInt()
-            totalC   += food.carbs.toInt(); totalP += food.protein.toInt()
-            updateMacroChips(view)
-        }
-    }
-
-    private fun updateMacroChips(view: View) {
+    private fun updateCalChip(view: View) {
         view.findViewById<Chip>(R.id.chipCal)?.text = getString(R.string.chip_cal, totalCal)
-        view.findViewById<Chip>(R.id.chipF)?.text   = getString(R.string.chip_fat, totalF)
-        view.findViewById<Chip>(R.id.chipC)?.text   = getString(R.string.chip_carb, totalC)
-        view.findViewById<Chip>(R.id.chipP)?.text   = getString(R.string.chip_protein, totalP)
     }
 }
 
 data class FoodResult(
     val name: String,
     val calories: Int,
-    val protein: Float,
-    val carbs: Float,
-    val fat: Float,
-    val serving: String
+    val serving: String,
+    var selectedQuantity: Int = 0
 )
