@@ -2,13 +2,12 @@ package com.lionfit.app.ui.sleep
 
 import android.annotation.SuppressLint
 import android.app.DatePickerDialog
-import android.content.Context
-import android.content.SharedPreferences
 import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
 import android.widget.ImageButton
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -34,28 +33,38 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog as ComposeDialog
 import androidx.fragment.app.Fragment
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import androidx.lifecycle.lifecycleScope
 import com.lionfit.app.R
+import com.lionfit.app.data.database.AppDatabase
+import com.lionfit.app.data.database.SupabaseManager
+import com.lionfit.app.data.model.SleepRecord
+import io.github.jan.supabase.gotrue.auth
+import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.*
 import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAdjusters
 import java.util.Locale
+import java.util.UUID
 
 val SleepBarColor = ComposeColor(0xFFBDA7EF)
 
 class SleepFragment : Fragment(R.layout.fragment_sleeping) {
 
-    private val sleepRecords = mutableStateListOf<SleepLocalRecord>()
+    private val sleepRecords = mutableStateListOf<SleepRecord>()
     private var currentWeekStart by mutableStateOf(LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY)))
-    private val PREFS_NAME = "sleep_data_prefs"
-    private val KEY_RECORDS = "sleep_records_list"
+    
+    private val db by lazy { AppDatabase.getDatabase(requireContext()) }
+    private val userId by lazy { SupabaseManager.client.auth.currentUserOrNull()?.id ?: "" }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // โหลดข้อมูลจริงจาก SharedPreferences
-        loadStoredData()
+        // โหลดข้อมูลจาก Room Database (กรองตาม User ID)
+        observeSleepData()
 
         val composeView = view.findViewById<ComposeView>(R.id.chart_compose_view)
         composeView?.apply {
@@ -78,7 +87,6 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
                 MaterialTheme {
                     var showAddDialog by remember { mutableStateOf(false) }
 
-                    // ใช้ sleepRecords.toList() เพื่อให้ตรวจจับการเปลี่ยนแปลงภายในลิสต์ได้ (แม้ขนาดเท่าเดิม)
                     LaunchedEffect(sleepRecords.toList(), currentWeekStart) {
                         updateXmlStats(view, sleepRecords, currentWeekStart)
                     }
@@ -89,8 +97,8 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
                         if (showAddDialog) {
                             AddSleepDialog(
                                 onDismiss = { showAddDialog = false },
-                                onSave = { newRecord ->
-                                    checkOverlapAndSave(newRecord)
+                                onSave = { startDate, startTime, endTime ->
+                                    createNewSleepRecord(startDate, startTime, endTime)
                                     showAddDialog = false
                                 }
                             )
@@ -125,77 +133,116 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
         }
     }
 
-    private fun loadStoredData() {
-        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val json = prefs.getString(KEY_RECORDS, null)
-        if (json != null) {
-            val type = object : TypeToken<List<SleepLocalRecord>>() {}.type
-            val list: List<SleepLocalRecord> = Gson().fromJson(json, type)
-            sleepRecords.clear()
-            sleepRecords.addAll(list)
-        } else {
-            // ข้อมูลเริ่มต้นครั้งแรก
-            val today = LocalDate.now()
-            val initial = listOf(
-                SleepLocalRecord(today.minusDays(1).toString(), "22:30", "06:30"),
-                SleepLocalRecord(today.minusDays(2).toString(), "23:00", "07:00"),
-                SleepLocalRecord(today.minusDays(3).toString(), "21:00", "05:00")
-            )
-            sleepRecords.addAll(initial)
-            saveToPrefs()
+    private fun observeSleepData() {
+        if (userId.isEmpty()) return
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            // แก้ไข: เรียกใช้ getSleepRecordsByUser เพื่อกรองข้อมูลตาม User ID
+            db.sleepDao().getSleepRecordsByUser(userId).collectLatest { records ->
+                sleepRecords.clear()
+                sleepRecords.addAll(records)
+            }
         }
     }
 
-    private fun saveToPrefs() {
-        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val json = Gson().toJson(sleepRecords.toList())
-        prefs.edit().putString(KEY_RECORDS, json).apply()
+    private fun createNewSleepRecord(startDate: LocalDate, startTime: LocalTime, endTime: LocalTime) {
+        if (userId.isEmpty()) {
+            Toast.makeText(requireContext(), "Please login first", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val startDT = startDate.atTime(startTime)
+        var endDT = startDate.atTime(endTime)
+        if (endTime.isBefore(startTime)) {
+            endDT = endDT.plusDays(1)
+        }
+
+        val duration = Duration.between(startDT, endDT)
+        val totalHours = duration.toMinutes() / 60.0
+
+        val newRecord = SleepRecord(
+            id = UUID.randomUUID().toString(),
+            userId = userId,
+            dateLogged = startDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(),
+            bedTimeInMillis = startDT.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(),
+            wakeTimeInMillis = endDT.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(),
+            totalHoursSlept = totalHours
+        )
+
+        checkOverlapAndSave(newRecord)
     }
 
-    private fun checkOverlapAndSave(newRecord: SleepLocalRecord) {
-        val newStartDT = newRecord.getStartDT()
-        val newEndDT = newRecord.getEndDT()
-
+    private fun checkOverlapAndSave(newRecord: SleepRecord) {
+        // ค้นหาว่ามีรายการที่ทับซ้อนกันหรือไม่
         val overlapping = sleepRecords.filter { existing ->
-            newStartDT.isBefore(existing.getEndDT()) && newEndDT.isAfter(existing.getStartDT())
+            newRecord.bedTimeInMillis < existing.wakeTimeInMillis && newRecord.wakeTimeInMillis > existing.bedTimeInMillis
         }
         
         if (overlapping.isNotEmpty()) {
             AlertDialog.Builder(requireContext())
                 .setTitle("แจ้งเตือน")
-                .setMessage("คุณเคยเลือกเวลานี้แล้วต้องการไปต่อไหม")
-                .setPositiveButton("ไปต่อ") { _, _ ->
-                    sleepRecords.removeAll(overlapping)
-                    sleepRecords.add(newRecord)
-                    saveToPrefs()
+                .setMessage("คุณได้เลือกเวลาดังกล่าวแล้ว ต้องการบันทึกต่อหรือไม่")
+                .setPositiveButton("ตกลง") { _, _ ->
+                    // ลบรายการเก่าที่ทับซ้อนทิ้ง แล้วบันทึกอันใหม่แทนที่
+                    saveRecord(newRecord, overlapping)
                 }
                 .setNegativeButton("ยกเลิก") { d, _ -> d.dismiss() }
                 .show()
         } else {
-            sleepRecords.add(newRecord)
-            saveToPrefs()
+            saveRecord(newRecord, emptyList())
         }
     }
 
-    private fun updateXmlStats(rootView: View, records: List<SleepLocalRecord>, startOfWeek: LocalDate) {
+    private fun saveRecord(newRecord: SleepRecord, overlappingRecords: List<SleepRecord>) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                // 1. ลบรายการเก่าที่ทับซ้อนออก (ทั้ง Local และ Cloud)
+                overlappingRecords.forEach { oldRecord ->
+                    db.sleepDao().deleteSleepRecord(oldRecord)
+                    SupabaseManager.deleteSleepRecord(oldRecord.id)
+                }
+
+                // 2. บันทึกรายการใหม่ลง Room (Local)
+                db.sleepDao().insertSleepRecord(newRecord)
+
+                // 3. ส่งรายการใหม่ขึ้น Supabase (Cloud)
+                val success = SupabaseManager.saveSleepRecord(newRecord)
+                
+                withContext(Dispatchers.Main) {
+                    if (success) {
+                        Toast.makeText(requireContext(), "Updated successfully", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(requireContext(), "Updated locally only", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(requireContext(), "Error saving data", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun updateXmlStats(rootView: View, records: List<SleepRecord>, startOfWeek: LocalDate) {
         val endOfWeek = startOfWeek.plusDays(6)
-        val weekStartDT = startOfWeek.atStartOfDay()
-        val weekEndDT = endOfWeek.atTime(LocalTime.MAX)
+        val weekStartMillis = startOfWeek.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val weekEndMillis = endOfWeek.atTime(LocalTime.MAX).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
         val recordsInWeek = records.filter {
-            it.getStartDT().isBefore(weekEndDT) && it.getEndDT().isAfter(weekStartDT)
+            it.bedTimeInMillis < weekEndMillis && it.wakeTimeInMillis > weekStartMillis
         }
 
         var totalMinutesInWeek = 0L
         recordsInWeek.forEach { record ->
-            val actualStart = if (record.getStartDT().isBefore(weekStartDT)) weekStartDT else record.getStartDT()
-            val actualEnd = if (record.getEndDT().isAfter(weekEndDT)) weekEndDT else record.getEndDT()
-            if (actualStart.isBefore(actualEnd)) {
-                totalMinutesInWeek += Duration.between(actualStart, actualEnd).toMinutes()
+            val actualStart = maxOf(record.bedTimeInMillis, weekStartMillis)
+            val actualEnd = minOf(record.wakeTimeInMillis, weekEndMillis)
+            if (actualStart < actualEnd) {
+                totalMinutesInWeek += (actualEnd - actualStart) / (1000 * 60)
             }
         }
 
-        val avgTotalMinutes = totalMinutesInWeek / 7
+        val avgTotalMinutes = if (recordsInWeek.isNotEmpty()) totalMinutesInWeek / 7 else 0
         rootView.findViewById<TextView>(R.id.tv_avg_hours)?.text = (avgTotalMinutes / 60).toString()
         rootView.findViewById<TextView>(R.id.tv_avg_minutes)?.text = (avgTotalMinutes % 60).toString()
         rootView.findViewById<TextView>(R.id.tv_date_range)?.text = 
@@ -210,24 +257,8 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
             .show()
     }
 
-    // Data Class สำหรับเก็บข้อมูลลง Prefs (เป็น String เพื่อให้ Gson ทำงานง่าย)
-    private data class SleepLocalRecord(
-        val dateStr: String, // ISO Date
-        val startTimeStr: String, // HH:mm
-        val endTimeStr: String // HH:mm
-    ) {
-        fun getStartDate(): LocalDate = LocalDate.parse(dateStr)
-        fun getStartTime(): LocalTime = LocalTime.parse(startTimeStr)
-        fun getEndTime(): LocalTime = LocalTime.parse(endTimeStr)
-        fun getStartDT(): LocalDateTime = getStartDate().atTime(getStartTime())
-        fun getEndDT(): LocalDateTime {
-            val endDT = getStartDate().atTime(getEndTime())
-            return if (getEndTime().isBefore(getStartTime())) endDT.plusDays(1) else endDT
-        }
-    }
-
     @Composable
-    private fun SleepChartContent(records: List<SleepLocalRecord>, startOfWeek: LocalDate) {
+    private fun SleepChartContent(records: List<SleepRecord>, startOfWeek: LocalDate) {
         val daysLabels = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
         val hourHeight = 45.dp 
         
@@ -244,13 +275,26 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
                         Row(modifier = Modifier.weight(1f).fillMaxHeight(), horizontalArrangement = Arrangement.SpaceBetween) {
                             daysLabels.forEachIndexed { index, _ ->
                                 val currentDate = startOfWeek.plusDays(index.toLong())
+                                val startOfDay = currentDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                                val endOfDay = currentDate.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
                                 Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                                     VerticalDivider(modifier = Modifier.align(Alignment.CenterStart), color = ComposeColor.Gray.copy(alpha = 0.05f))
                                     records.forEach { record ->
-                                        if (record.getStartDate() == currentDate) {
-                                            DrawSleepBar(record.getStartTime(), if (record.getEndTime().isBefore(record.getStartTime())) LocalTime.MAX else record.getEndTime(), hourHeight, Alignment.TopCenter)
-                                        } else if (record.getStartDate().plusDays(1) == currentDate && record.getEndTime().isBefore(record.getStartTime())) {
-                                            DrawSleepBar(LocalTime.MIN, record.getEndTime(), hourHeight, Alignment.TopCenter)
+                                        // ตรวจสอบว่า record คาบเกี่ยววันปัจจุบันหรือไม่
+                                        val drawStart = maxOf(record.bedTimeInMillis, startOfDay)
+                                        val drawEnd = minOf(record.wakeTimeInMillis, endOfDay)
+                                        
+                                        if (drawStart < drawEnd) {
+                                            val startLT = LocalDateTime.ofInstant(Instant.ofEpochMilli(drawStart), ZoneId.systemDefault()).toLocalTime()
+                                            val endLT = LocalDateTime.ofInstant(Instant.ofEpochMilli(drawEnd), ZoneId.systemDefault()).toLocalTime()
+                                            
+                                            DrawSleepBar(
+                                                startTime = startLT, 
+                                                endTime = if (drawEnd == endOfDay) LocalTime.MAX else endLT, 
+                                                hourHeight = hourHeight, 
+                                                alignment = Alignment.TopCenter
+                                            )
                                         }
                                     }
                                 }
@@ -277,7 +321,7 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    private fun AddSleepDialog(onDismiss: () -> Unit, onSave: (SleepLocalRecord) -> Unit) {
+    private fun AddSleepDialog(onDismiss: () -> Unit, onSave: (LocalDate, LocalTime, LocalTime) -> Unit) {
         var startDate by remember { mutableStateOf(LocalDate.now()) }
         var startTime by remember { mutableStateOf(LocalTime.of(22, 0)) }
         var endTime by remember { mutableStateOf(LocalTime.of(7, 0)) }
@@ -298,7 +342,7 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
                     }
                     Spacer(modifier = Modifier.height(32.dp))
                     Button(onClick = { 
-                        onSave(SleepLocalRecord(startDate.toString(), startTime.toString(), endTime.toString()))
+                        onSave(startDate, startTime, endTime)
                     }, modifier = Modifier.size(56.dp), shape = CircleShape, colors = ButtonDefaults.buttonColors(containerColor = ComposeColor.Black), contentPadding = PaddingValues(0.dp)) {
                         Icon(Icons.Default.Check, contentDescription = "Save", tint = ComposeColor.White)
                     }

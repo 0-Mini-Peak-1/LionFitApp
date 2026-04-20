@@ -3,6 +3,7 @@ package com.lionfit.app.data.database
 import com.lionfit.app.BuildConfig
 import com.lionfit.app.data.model.DietLog
 import com.lionfit.app.data.model.RunSession
+import com.lionfit.app.data.model.SleepRecord
 import com.lionfit.app.data.model.UserProfile
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.gotrue.Auth
@@ -144,6 +145,32 @@ object SupabaseManager {
         } catch (e: Exception) {
             e.printStackTrace()
             false
+        }
+    }
+
+    // Sync Sleep to Cloud
+    suspend fun saveSleepRecord(sleepRecord: SleepRecord): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                client.postgrest["sleep_records"].insert(sleepRecord)
+                true
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
+            }
+        }
+    }
+
+    // Delete Sleep from Cloud
+    suspend fun deleteSleepRecord(recordId: String) {
+        withContext(Dispatchers.IO) {
+            try {
+                client.postgrest["sleep_records"].delete {
+                    filter { eq("id", recordId) }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 }
