@@ -42,6 +42,7 @@ class SaveActivityFragment : Fragment(R.layout.fragment_save_activity) {
     private lateinit var etDescription: EditText
     private lateinit var spinnerType: Spinner
     private lateinit var tvDistance: TextView
+    private lateinit var tvSaveCalories: TextView
     private lateinit var tvPace: TextView
     private lateinit var tvTime: TextView
     private lateinit var btnSave: MaterialButton
@@ -180,6 +181,7 @@ class SaveActivityFragment : Fragment(R.layout.fragment_save_activity) {
         etDescription = view.findViewById(R.id.etActivityDescription)
         spinnerType = view.findViewById(R.id.spinnerActivityType)
         tvDistance = view.findViewById(R.id.tvFinalDistance)
+        tvSaveCalories = view.findViewById<TextView>(R.id.tvSaveCalories)
         tvPace = view.findViewById(R.id.tvFinalPace)
         tvTime = view.findViewById(R.id.tvFinalTime)
         btnSave = view.findViewById(R.id.btnSaveActivity)
@@ -202,6 +204,7 @@ class SaveActivityFragment : Fragment(R.layout.fragment_save_activity) {
         val paceSeconds = ((rawPace - paceMinutes) * 60f).toInt()
         val finalPaceString = String.format("%d'%02d\"", paceMinutes, paceSeconds)
         tvPace.text = finalPaceString
+        tvSaveCalories.text = "${session.caloriesBurned} kcal"
 
         // Time handling (convert millis to Minutes)
         val minutes = (session.durationInMillis / 1000) / 60

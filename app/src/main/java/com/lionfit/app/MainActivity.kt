@@ -159,6 +159,3 @@ class MainActivity : AppCompatActivity() {
        transaction.commit()
    }
 }
-
-// --- PLACEHOLDER FRAGMENTS ---
-//class SleepFragment : Fragment(R.layout.fragment_placeholder)
