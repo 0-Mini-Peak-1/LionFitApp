@@ -11,11 +11,9 @@ import kotlinx.coroutines.launch
 import com.lionfit.app.data.database.SupabaseManager
 import io.github.jan.supabase.gotrue.auth
 import androidx.appcompat.app.AppCompatDelegate
-import com.lionfit.app.data.model.UserProfile
 import android.widget.ImageView
 import androidx.activity.viewModels
 import coil.load
-import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.lionfit.app.ui.shared.SharedViewModel
