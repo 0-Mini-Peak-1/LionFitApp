@@ -254,6 +254,8 @@ object SupabaseManager {
     }
 
     // Sync Sleep to Cloud
+    // --- SLEEP SYNC FUNCTIONS ---
+
     suspend fun saveSleepRecord(sleepRecord: SleepRecord): Boolean {
         return withContext(Dispatchers.IO) {
             try {
@@ -276,6 +278,19 @@ object SupabaseManager {
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+    }
+
+    suspend fun getUserSleepHistory(userId: String): List<SleepRecord> {
+        return try {
+            client.postgrest["sleep_records"]
+                .select {
+                    filter { eq("user_id", userId) }
+                }
+                .decodeList<SleepRecord>()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
         }
     }
 }
