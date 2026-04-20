@@ -14,6 +14,9 @@ interface RunDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertRun(runSession: RunSession)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAllRuns(runs: List<RunSession>)
+
     @Update
     suspend fun updateRun(runSession: RunSession)
 
@@ -23,5 +26,4 @@ interface RunDao {
     // Flow automatically updates the UI when new runs are added
     @Query("SELECT * FROM run_sessions_table ORDER BY timestamp DESC")
     fun getAllRunsSortedByDate(): Flow<List<RunSession>>
-
 }
