@@ -9,7 +9,9 @@ import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -39,7 +42,6 @@ import com.lionfit.app.data.database.AppDatabase
 import com.lionfit.app.data.database.SupabaseManager
 import com.lionfit.app.data.model.SleepRecord
 import io.github.jan.supabase.gotrue.auth
-import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -51,6 +53,7 @@ import java.util.Locale
 import java.util.UUID
 
 val SleepBarColor = ComposeColor(0xFFBDA7EF)
+val SelectedSleepBarColor = ComposeColor(0xFF916CD5)
 
 class SleepFragment : Fragment(R.layout.fragment_sleeping) {
 
@@ -63,8 +66,11 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // โหลดข้อมูลจาก Room Database (กรองตาม User ID)
+        // 1. ติดตามข้อมูลจาก Room (Local)
         observeSleepData()
+
+        // 2. ดึงข้อมูลจาก Supabase มาลงเครื่อง (Cloud Sync)
+        syncDataFromCloud()
 
         val composeView = view.findViewById<ComposeView>(R.id.chart_compose_view)
         composeView?.apply {
@@ -86,13 +92,38 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
             setContent {
                 MaterialTheme {
                     var showAddDialog by remember { mutableStateOf(false) }
+                    var selectedRecord by remember { mutableStateOf<SleepRecord?>(null) }
 
                     LaunchedEffect(sleepRecords.toList(), currentWeekStart) {
                         updateXmlStats(view, sleepRecords, currentWeekStart)
                     }
 
                     Box(modifier = Modifier.fillMaxSize()) {
-                        SleepChartContent(records = sleepRecords, startOfWeek = currentWeekStart)
+                        SleepChartContent(
+                            records = sleepRecords, 
+                            startOfWeek = currentWeekStart,
+                            selectedRecord = selectedRecord,
+                            onRecordClick = { selectedRecord = it }
+                        )
+
+                        AnimatedVisibility(
+                            visible = selectedRecord != null,
+                            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+                            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp)
+                        ) {
+                            selectedRecord?.let { record ->
+                                RecordDetailPopup(
+                                    record = record,
+                                    onDismiss = { selectedRecord = null },
+                                    onDelete = {
+                                        showDeleteConfirmation(record) {
+                                            selectedRecord = null
+                                        }
+                                    }
+                                )
+                            }
+                        }
 
                         if (showAddDialog) {
                             AddSleepDialog(
@@ -135,9 +166,7 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
 
     private fun observeSleepData() {
         if (userId.isEmpty()) return
-
         viewLifecycleOwner.lifecycleScope.launch {
-            // แก้ไข: เรียกใช้ getSleepRecordsByUser เพื่อกรองข้อมูลตาม User ID
             db.sleepDao().getSleepRecordsByUser(userId).collectLatest { records ->
                 sleepRecords.clear()
                 sleepRecords.addAll(records)
@@ -145,17 +174,60 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
         }
     }
 
-    private fun createNewSleepRecord(startDate: LocalDate, startTime: LocalTime, endTime: LocalTime) {
-        if (userId.isEmpty()) {
-            Toast.makeText(requireContext(), "Please login first", Toast.LENGTH_SHORT).show()
-            return
+    private fun syncDataFromCloud() {
+        if (userId.isEmpty()) return
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val cloudRecords = SupabaseManager.getUserSleepHistory(userId)
+                if (cloudRecords.isNotEmpty()) {
+                    cloudRecords.forEach { record ->
+                        db.sleepDao().insertSleepRecord(record)
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
+    }
 
+    private fun showDeleteConfirmation(record: SleepRecord, onDeleted: () -> Unit) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("ลบข้อมูล")
+            .setMessage("คุณต้องการลบเวลานี้ใช่หรือไม่")
+            .setPositiveButton("ลบ") { _, _ ->
+                deleteRecord(record)
+                onDeleted()
+            }
+            .setNegativeButton("ยกเลิก", null)
+            .show()
+    }
+
+    private fun deleteRecord(record: SleepRecord) {
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                // 1. ลบจาก Room (Local)
+                db.sleepDao().deleteSleepRecord(record)
+
+                // 2. ลบจาก Supabase (Cloud)
+                SupabaseManager.deleteSleepRecord(record.id)
+
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(requireContext(), "ลบข้อมูลเรียบร้อยแล้ว", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(requireContext(), "เกิดข้อผิดพลาดในการลบข้อมูล", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun createNewSleepRecord(startDate: LocalDate, startTime: LocalTime, endTime: LocalTime) {
+        if (userId.isEmpty()) return
         val startDT = startDate.atTime(startTime)
         var endDT = startDate.atTime(endTime)
-        if (endTime.isBefore(startTime)) {
-            endDT = endDT.plusDays(1)
-        }
+        if (endTime.isBefore(startTime)) endDT = endDT.plusDays(1)
 
         val duration = Duration.between(startDT, endDT)
         val totalHours = duration.toMinutes() / 60.0
@@ -168,25 +240,19 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
             wakeTimeInMillis = endDT.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(),
             totalHoursSlept = totalHours
         )
-
         checkOverlapAndSave(newRecord)
     }
 
     private fun checkOverlapAndSave(newRecord: SleepRecord) {
-        // ค้นหาว่ามีรายการที่ทับซ้อนกันหรือไม่
         val overlapping = sleepRecords.filter { existing ->
             newRecord.bedTimeInMillis < existing.wakeTimeInMillis && newRecord.wakeTimeInMillis > existing.bedTimeInMillis
         }
-        
         if (overlapping.isNotEmpty()) {
             AlertDialog.Builder(requireContext())
                 .setTitle("แจ้งเตือน")
                 .setMessage("คุณได้เลือกเวลาดังกล่าวแล้ว ต้องการบันทึกต่อหรือไม่")
-                .setPositiveButton("ตกลง") { _, _ ->
-                    // ลบรายการเก่าที่ทับซ้อนทิ้ง แล้วบันทึกอันใหม่แทนที่
-                    saveRecord(newRecord, overlapping)
-                }
-                .setNegativeButton("ยกเลิก") { d, _ -> d.dismiss() }
+                .setPositiveButton("ตกลง") { _, _ -> saveRecord(newRecord, overlapping) }
+                .setNegativeButton("ยกเลิก", null)
                 .show()
         } else {
             saveRecord(newRecord, emptyList())
@@ -196,31 +262,16 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
     private fun saveRecord(newRecord: SleepRecord, overlappingRecords: List<SleepRecord>) {
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             try {
-                // 1. ลบรายการเก่าที่ทับซ้อนออก (ทั้ง Local และ Cloud)
-                overlappingRecords.forEach { oldRecord ->
-                    db.sleepDao().deleteSleepRecord(oldRecord)
-                    SupabaseManager.deleteSleepRecord(oldRecord.id)
+                overlappingRecords.forEach {
+                    db.sleepDao().deleteSleepRecord(it)
+                    SupabaseManager.deleteSleepRecord(it.id)
                 }
-
-                // 2. บันทึกรายการใหม่ลง Room (Local)
                 db.sleepDao().insertSleepRecord(newRecord)
-
-                // 3. ส่งรายการใหม่ขึ้น Supabase (Cloud)
-                val success = SupabaseManager.saveSleepRecord(newRecord)
-                
+                SupabaseManager.saveSleepRecord(newRecord)
                 withContext(Dispatchers.Main) {
-                    if (success) {
-                        Toast.makeText(requireContext(), "Updated successfully", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(requireContext(), "Updated locally only", Toast.LENGTH_SHORT).show()
-                    }
+                    Toast.makeText(requireContext(), "บันทึกข้อมูลเรียบร้อย", Toast.LENGTH_SHORT).show()
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(requireContext(), "Error saving data", Toast.LENGTH_SHORT).show()
-                }
-            }
+            } catch (e: Exception) { e.printStackTrace() }
         }
     }
 
@@ -233,6 +284,10 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
             it.bedTimeInMillis < weekEndMillis && it.wakeTimeInMillis > weekStartMillis
         }
 
+        val activeDaysCount = recordsInWeek.map { record ->
+            LocalDateTime.ofInstant(Instant.ofEpochMilli(record.bedTimeInMillis), ZoneId.systemDefault()).toLocalDate()
+        }.distinct().size
+
         var totalMinutesInWeek = 0L
         recordsInWeek.forEach { record ->
             val actualStart = maxOf(record.bedTimeInMillis, weekStartMillis)
@@ -242,7 +297,8 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
             }
         }
 
-        val avgTotalMinutes = if (recordsInWeek.isNotEmpty()) totalMinutesInWeek / 7 else 0
+        val avgTotalMinutes = if (activeDaysCount > 0) totalMinutesInWeek / activeDaysCount else 0
+
         rootView.findViewById<TextView>(R.id.tv_avg_hours)?.text = (avgTotalMinutes / 60).toString()
         rootView.findViewById<TextView>(R.id.tv_avg_minutes)?.text = (avgTotalMinutes % 60).toString()
         rootView.findViewById<TextView>(R.id.tv_date_range)?.text = 
@@ -253,12 +309,17 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
         AlertDialog.Builder(requireContext())
             .setTitle("Information")
             .setMessage("เลือกเวลานอนของคุณ กราฟนี้จะแสดงชั่วโมงการนอนเฉลี่ยของคุณ 1 สัปดาห์")
-            .setPositiveButton("OK") { d, _ -> d.dismiss() }
+            .setPositiveButton("OK", null)
             .show()
     }
 
     @Composable
-    private fun SleepChartContent(records: List<SleepRecord>, startOfWeek: LocalDate) {
+    private fun SleepChartContent(
+        records: List<SleepRecord>, 
+        startOfWeek: LocalDate,
+        selectedRecord: SleepRecord?,
+        onRecordClick: (SleepRecord) -> Unit
+    ) {
         val daysLabels = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
         val hourHeight = 45.dp 
         
@@ -281,7 +342,6 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
                                 Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                                     VerticalDivider(modifier = Modifier.align(Alignment.CenterStart), color = ComposeColor.Gray.copy(alpha = 0.05f))
                                     records.forEach { record ->
-                                        // ตรวจสอบว่า record คาบเกี่ยววันปัจจุบันหรือไม่
                                         val drawStart = maxOf(record.bedTimeInMillis, startOfDay)
                                         val drawEnd = minOf(record.wakeTimeInMillis, endOfDay)
                                         
@@ -293,7 +353,9 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
                                                 startTime = startLT, 
                                                 endTime = if (drawEnd == endOfDay) LocalTime.MAX else endLT, 
                                                 hourHeight = hourHeight, 
-                                                alignment = Alignment.TopCenter
+                                                alignment = Alignment.TopCenter,
+                                                isSelected = record.id == selectedRecord?.id,
+                                                onClick = { onRecordClick(record) }
                                             )
                                         }
                                     }
@@ -310,13 +372,92 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
     }
 
     @Composable
-    private fun BoxScope.DrawSleepBar(startTime: LocalTime, endTime: LocalTime, hourHeight: androidx.compose.ui.unit.Dp, alignment: Alignment) {
+    private fun BoxScope.DrawSleepBar(
+        startTime: LocalTime, 
+        endTime: LocalTime, 
+        hourHeight: androidx.compose.ui.unit.Dp, 
+        alignment: Alignment,
+        isSelected: Boolean,
+        onClick: () -> Unit
+    ) {
         val startMin = startTime.toSecondOfDay() / 60f
         val endMin = if (endTime == LocalTime.MAX) 1440f else endTime.toSecondOfDay() / 60f
         val durationMin = endMin - startMin
         val startPos = (startMin / 60f) * hourHeight.value
         val durationHeight = (durationMin / 60f) * hourHeight.value
-        Box(modifier = Modifier.padding(top = startPos.dp).width(20.dp).height(durationHeight.dp).align(alignment).clip(RoundedCornerShape(4.dp)).background(SleepBarColor))
+        
+        Box(
+            modifier = Modifier
+                .padding(top = startPos.dp)
+                .width(24.dp)
+                .height(durationHeight.dp)
+                .align(alignment)
+                .clip(RoundedCornerShape(6.dp))
+                .background(if (isSelected) SelectedSleepBarColor else SleepBarColor)
+                .clickable { onClick() }
+        )
+    }
+
+    @Composable
+    private fun RecordDetailPopup(record: SleepRecord, onDismiss: () -> Unit, onDelete: () -> Unit) {
+        var showMenu by remember { mutableStateOf(false) }
+        
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .padding(8.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = ComposeColor.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    val hours = record.totalHoursSlept.toInt()
+                    val minutes = ((record.totalHoursSlept - hours) * 60).toInt()
+                    Text(
+                        text = "เวลานอนรวม: $hours ชม. $minutes นาที",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                    Text(
+                        text = LocalDateTime.ofInstant(Instant.ofEpochMilli(record.bedTimeInMillis), ZoneId.systemDefault())
+                            .format(DateTimeFormatter.ofPattern("HH:mm")) + " - " +
+                        LocalDateTime.ofInstant(Instant.ofEpochMilli(record.wakeTimeInMillis), ZoneId.systemDefault())
+                            .format(DateTimeFormatter.ofPattern("HH:mm")),
+                        fontSize = 12.sp,
+                        color = ComposeColor.Gray
+                    )
+                }
+                
+                Box {
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "More")
+                    }
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("ลบรายการนี้", color = ComposeColor.Red) },
+                            onClick = {
+                                showMenu = false
+                                onDelete()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("ปิด") },
+                            onClick = { 
+                                showMenu = false
+                                onDismiss()
+                            }
+                        )
+                    }
+                }
+            }
+        }
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -341,9 +482,7 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
                         AddSleepRow("Ends", endDate, endTime) { isDate -> pickingStart = false; if (isDate) showDatePicker = true else showTimeWheel = true }
                     }
                     Spacer(modifier = Modifier.height(32.dp))
-                    Button(onClick = { 
-                        onSave(startDate, startTime, endTime)
-                    }, modifier = Modifier.size(56.dp), shape = CircleShape, colors = ButtonDefaults.buttonColors(containerColor = ComposeColor.Black), contentPadding = PaddingValues(0.dp)) {
+                    Button(onClick = { onSave(startDate, startTime, endTime) }, modifier = Modifier.size(56.dp), shape = CircleShape, colors = ButtonDefaults.buttonColors(containerColor = ComposeColor.Black), contentPadding = PaddingValues(0.dp)) {
                         Icon(Icons.Default.Check, contentDescription = "Save", tint = ComposeColor.White)
                     }
                 }
