@@ -44,6 +44,7 @@ import android.app.Dialog
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.view.Window
+import androidx.activity.OnBackPressedCallback
 
 class RunningFragment : Fragment(R.layout.fragment_running) {
     private lateinit var runDao: RunDao
@@ -254,7 +255,7 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
             requireContext().startService(pauseIntent)
             resetToMiniCard()
             // Switch the screen to the Save Form
-            (requireActivity() as MainActivity).switchFragment("save_activity")
+            (requireActivity() as MainActivity).switchFragment("save_activity", true)
 
         } else {
             Toast.makeText(requireContext(), "Run too short to save.", Toast.LENGTH_SHORT).show()
@@ -319,7 +320,7 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
         }
         requireContext().startService(pauseIntent)
         resetToMiniCard()
-        (requireActivity() as MainActivity).switchFragment("save_activity")
+        (requireActivity() as MainActivity).switchFragment("save_activity", true)
     }
 
     private fun resetToMiniCard() {
@@ -451,7 +452,7 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
 
         val fabHistory = view?.findViewById<FloatingActionButton>(R.id.fabHistory)
         fabHistory?.setOnClickListener {
-            (requireActivity() as MainActivity).switchFragment("run_history")
+            (requireActivity() as MainActivity).switchFragment("run_history",true)
         }
 
         btnPlayPause.setOnClickListener { playPauseAction() }

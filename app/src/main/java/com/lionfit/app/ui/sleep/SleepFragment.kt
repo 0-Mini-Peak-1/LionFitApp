@@ -314,91 +314,6 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
     }
 
     @Composable
-    private fun SleepChartContent(
-        records: List<SleepRecord>, 
-        startOfWeek: LocalDate,
-        selectedRecord: SleepRecord?,
-        onRecordClick: (SleepRecord) -> Unit
-    ) {
-        val daysLabels = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
-        val hourHeight = 45.dp 
-        
-        Column(modifier = Modifier.fillMaxSize()) {
-            Box(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-                Box(modifier = Modifier.fillMaxWidth().height(hourHeight * 24).padding(vertical = 16.dp, horizontal = 8.dp)) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        repeat(25) { Box(modifier = Modifier.height(hourHeight)) { HorizontalDivider(color = ComposeColor.Gray.copy(alpha = 0.1f)) } }
-                    }
-                    Row(modifier = Modifier.fillMaxSize()) {
-                        Column(modifier = Modifier.width(40.dp)) {
-                            repeat(25) { i -> Box(modifier = Modifier.height(hourHeight)) { Text(String.format(Locale.getDefault(), "%02d:00", i), color = ComposeColor.LightGray, fontSize = 10.sp) } }
-                        }
-                        Row(modifier = Modifier.weight(1f).fillMaxHeight(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            daysLabels.forEachIndexed { index, _ ->
-                                val currentDate = startOfWeek.plusDays(index.toLong())
-                                val startOfDay = currentDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                                val endOfDay = currentDate.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-
-                                Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                                    VerticalDivider(modifier = Modifier.align(Alignment.CenterStart), color = ComposeColor.Gray.copy(alpha = 0.05f))
-                                    records.forEach { record ->
-                                        val drawStart = maxOf(record.bedTimeInMillis, startOfDay)
-                                        val drawEnd = minOf(record.wakeTimeInMillis, endOfDay)
-                                        
-                                        if (drawStart < drawEnd) {
-                                            val startLT = LocalDateTime.ofInstant(Instant.ofEpochMilli(drawStart), ZoneId.systemDefault()).toLocalTime()
-                                            val endLT = LocalDateTime.ofInstant(Instant.ofEpochMilli(drawEnd), ZoneId.systemDefault()).toLocalTime()
-                                            
-                                            DrawSleepBar(
-                                                startTime = startLT, 
-                                                endTime = if (drawEnd == endOfDay) LocalTime.MAX else endLT, 
-                                                hourHeight = hourHeight, 
-                                                alignment = Alignment.TopCenter,
-                                                isSelected = record.id == selectedRecord?.id,
-                                                onClick = { onRecordClick(record) }
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).padding(start = 40.dp)) {
-                daysLabels.forEach { Text(it, color = ComposeColor.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center) }
-            }
-        }
-    }
-
-    @Composable
-    private fun BoxScope.DrawSleepBar(
-        startTime: LocalTime, 
-        endTime: LocalTime, 
-        hourHeight: androidx.compose.ui.unit.Dp, 
-        alignment: Alignment,
-        isSelected: Boolean,
-        onClick: () -> Unit
-    ) {
-        val startMin = startTime.toSecondOfDay() / 60f
-        val endMin = if (endTime == LocalTime.MAX) 1440f else endTime.toSecondOfDay() / 60f
-        val durationMin = endMin - startMin
-        val startPos = (startMin / 60f) * hourHeight.value
-        val durationHeight = (durationMin / 60f) * hourHeight.value
-        
-        Box(
-            modifier = Modifier
-                .padding(top = startPos.dp)
-                .width(24.dp)
-                .height(durationHeight.dp)
-                .align(alignment)
-                .clip(RoundedCornerShape(6.dp))
-                .background(if (isSelected) SelectedSleepBarColor else SleepBarColor)
-                .clickable { onClick() }
-        )
-    }
-
-    @Composable
     private fun RecordDetailPopup(record: SleepRecord, onDismiss: () -> Unit, onDelete: () -> Unit) {
         var showMenu by remember { mutableStateOf(false) }
         
@@ -545,4 +460,89 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
             }
         }
     }
+}
+
+@Composable
+fun SleepChartContent(
+    records: List<SleepRecord>,
+    startOfWeek: LocalDate,
+    selectedRecord: SleepRecord?,
+    onRecordClick: (SleepRecord) -> Unit
+) {
+    val daysLabels = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+    val hourHeight = 45.dp
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+            Box(modifier = Modifier.fillMaxWidth().height(hourHeight * 24).padding(vertical = 16.dp, horizontal = 8.dp)) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    repeat(25) { Box(modifier = Modifier.height(hourHeight)) { HorizontalDivider(color = ComposeColor.Gray.copy(alpha = 0.1f)) } }
+                }
+                Row(modifier = Modifier.fillMaxSize()) {
+                    Column(modifier = Modifier.width(40.dp)) {
+                        repeat(25) { i -> Box(modifier = Modifier.height(hourHeight)) { Text(String.format(Locale.getDefault(), "%02d:00", i), color = ComposeColor.LightGray, fontSize = 10.sp) } }
+                    }
+                    Row(modifier = Modifier.weight(1f).fillMaxHeight(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        daysLabels.forEachIndexed { index, _ ->
+                            val currentDate = startOfWeek.plusDays(index.toLong())
+                            val startOfDay = currentDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                            val endOfDay = currentDate.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
+                            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                                VerticalDivider(modifier = Modifier.align(Alignment.CenterStart), color = ComposeColor.Gray.copy(alpha = 0.05f))
+                                records.forEach { record ->
+                                    val drawStart = maxOf(record.bedTimeInMillis, startOfDay)
+                                    val drawEnd = minOf(record.wakeTimeInMillis, endOfDay)
+
+                                    if (drawStart < drawEnd) {
+                                        val startLT = LocalDateTime.ofInstant(Instant.ofEpochMilli(drawStart), ZoneId.systemDefault()).toLocalTime()
+                                        val endLT = LocalDateTime.ofInstant(Instant.ofEpochMilli(drawEnd), ZoneId.systemDefault()).toLocalTime()
+
+                                        DrawSleepBar(
+                                            startTime = startLT,
+                                            endTime = if (drawEnd == endOfDay) LocalTime.MAX else endLT,
+                                            hourHeight = hourHeight,
+                                            alignment = Alignment.TopCenter,
+                                            isSelected = record.id == selectedRecord?.id,
+                                            onClick = { onRecordClick(record) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).padding(start = 40.dp)) {
+            daysLabels.forEach { Text(it, color = ComposeColor.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center) }
+        }
+    }
+}
+
+@Composable
+fun BoxScope.DrawSleepBar(
+    startTime: LocalTime,
+    endTime: LocalTime,
+    hourHeight: androidx.compose.ui.unit.Dp,
+    alignment: Alignment,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val startMin = startTime.toSecondOfDay() / 60f
+    val endMin = if (endTime == LocalTime.MAX) 1440f else endTime.toSecondOfDay() / 60f
+    val durationMin = endMin - startMin
+    val startPos = (startMin / 60f) * hourHeight.value
+    val durationHeight = (durationMin / 60f) * hourHeight.value
+
+    Box(
+        modifier = Modifier
+            .padding(top = startPos.dp)
+            .width(24.dp)
+            .height(durationHeight.dp)
+            .align(alignment)
+            .clip(RoundedCornerShape(6.dp))
+            .background(if (isSelected) SelectedSleepBarColor else SleepBarColor)
+            .clickable { onClick() }
+    )
 }

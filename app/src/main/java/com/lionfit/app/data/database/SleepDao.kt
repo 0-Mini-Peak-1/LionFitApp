@@ -13,6 +13,9 @@ interface SleepDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSleepRecord(sleepRecord: SleepRecord)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAllSleepRecords(records: List<SleepRecord>)
+
     @Delete
     suspend fun deleteSleepRecord(sleepRecord: SleepRecord)
 

@@ -196,9 +196,13 @@
                 android:textStyle="bold" />
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardLastRun"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?android:attr/selectableItemBackground"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="2dp">
 
@@ -371,20 +375,10 @@
                             android:textSize="14sp" />
                     </LinearLayout>
 
-                    <TextView
-                        android:id="@+id/tvSleepDateRange"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Last 7 days"
-                        android:textColor="#9E9E9E"
-                        android:textSize="12sp" />
-
-                    <View
+                    <androidx.compose.ui.platform.ComposeView
+                        android:id="@+id/dashboard_sleep_chart"
                         android:layout_width="match_parent"
-                        android:layout_height="120dp"
-                        android:layout_marginTop="16dp"
-                        android:background="#F0F0FF" />
-
+                        android:layout_height="200dp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

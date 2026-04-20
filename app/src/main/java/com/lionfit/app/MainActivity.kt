@@ -17,8 +17,9 @@ import coil.load
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.lionfit.app.ui.shared.SharedViewModel
+import androidx.activity.OnBackPressedCallback
 
-// Import the actual fragments
+// Import the fragments
 import com.lionfit.app.ui.running.RunningFragment
 import com.lionfit.app.ui.running.SaveActivityFragment
 import com.lionfit.app.ui.history.RunHistoryFragment
@@ -44,6 +45,28 @@ class MainActivity : AppCompatActivity() {
         val topBar = findViewById<View>(R.id.top_bar)
         val topProfileImageView = findViewById<ImageView>(R.id.iv_top_profile_pic)
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_navigation)
+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                val bottomNav = findViewById<BottomNavigationView>(R.id.bottom_navigation)
+
+                // RULE 1: Are we on a sub-screen? (e.g., Run History)
+                if (supportFragmentManager.backStackEntryCount > 0) {
+                    // Pop it off the stack to go back normally
+                    supportFragmentManager.popBackStack()
+                }
+                // RULE 2: Are we on a different tab? (Sleep, Run, Diet, Profile)
+                else if (bottomNav.selectedItemId != R.id.nav_dashboard) {
+                    // Jump back to the Home/Dashboard tab!
+                    // (Assuming clicking this item triggers your switchFragment automatically)
+                    bottomNav.selectedItemId = R.id.nav_dashboard
+                }
+                // RULE 3: We are on the Dashboard and the back stack is empty.
+                else {
+                    finish()
+                }
+            }
+        })
 
         sharedViewModel.updatedProfilePicUrl.observe(this) { newUrl ->
             if (newUrl != null) {
@@ -113,7 +136,7 @@ class MainActivity : AppCompatActivity() {
     }
 
    // Helper Functions
-   fun switchFragment(targetTag: String) {
+   fun switchFragment(targetTag: String, addToBackStack: Boolean = false) {
        val transaction = supportFragmentManager.beginTransaction()
        val bottomNavigationView = findViewById<BottomNavigationView>(R.id.bottom_navigation)
        val currentVisibleTag = supportFragmentManager.fragments.firstOrNull { it.isVisible }?.tag
@@ -154,6 +177,10 @@ class MainActivity : AppCompatActivity() {
            "running" -> bottomNavigationView.menu.findItem(R.id.nav_running)?.isChecked = true
            "sleep" -> bottomNavigationView.menu.findItem(R.id.nav_sleep)?.isChecked = true
            "profile" -> bottomNavigationView.menu.findItem(R.id.nav_profile)?.isChecked = true
+       }
+       // Add to back stack
+       if (addToBackStack) {
+           transaction.addToBackStack(targetTag)
        }
 
        transaction.commit()

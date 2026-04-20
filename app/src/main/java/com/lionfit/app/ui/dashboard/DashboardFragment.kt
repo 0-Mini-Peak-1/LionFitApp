@@ -17,9 +17,15 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import com.lionfit.app.data.database.SupabaseManager
 import io.github.jan.supabase.gotrue.auth
+import androidx.compose.material3.MaterialTheme
+import com.lionfit.app.MainActivity
+import com.lionfit.app.ui.history.RunHistoryFragment
+import java.time.LocalDate
+import java.time.DayOfWeek
+import java.time.temporal.TemporalAdjusters
+import com.lionfit.app.ui.sleep.SleepChartContent
 
 /**
  * Fragment สำหรับแสดงหน้า Dashboard หลักของแอปพลิเคชัน
@@ -27,6 +33,7 @@ import io.github.jan.supabase.gotrue.auth
  */
 class DashboardFragment : Fragment() {
 
+    private val dashboardSleepRecords = androidx.compose.runtime.mutableStateListOf<com.lionfit.app.data.model.SleepRecord>()
     // เชื่อมต่อกับฐานข้อมูล Room
     private val db by lazy { AppDatabase.getDatabase(requireContext()) }
 
@@ -120,48 +127,55 @@ class DashboardFragment : Fragment() {
         val tvDistance = view.findViewById<TextView>(R.id.tvRunDistance)
         val tvPace = view.findViewById<TextView>(R.id.tvRunPace)
         val tvTime = view.findViewById<TextView>(R.id.tvRunTime)
+        val cardLastRun = view.findViewById<com.google.android.material.card.MaterialCardView>(R.id.cardLastRun)
 
-        // Use viewLifecycleOwner to prevent memory leaks when switching tabs
+        cardLastRun.setOnClickListener {
+            (requireActivity() as MainActivity).switchFragment("run_history",true)
+        }
+
+        // 1. ให้ UI เฝ้ามองการวิ่งล่าสุดจาก Room (อัปเดตทันทีที่กลับมาจาก SaveActivity)
+        viewLifecycleOwner.lifecycleScope.launch {
+            // สมมติว่ามีฟังก์ชัน getAllRuns() หรือดึงรายการวิ่งล่าสุดใน runDao
+            db.runDao().getAllRunsSortedByDate().collectLatest { runs ->
+                if (runs.isNotEmpty()) {
+                    // จัดการแสดงผลข้อมูลจาก Local
+                    val lastRun = runs.first() // ดึงข้อมูลอันล่าสุด
+
+                    tvTitle.text = lastRun.title
+                    val sdf = SimpleDateFormat("dd/MM/yyyy 'at' hh:mm a", Locale.getDefault())
+                    tvDateTime.text = sdf.format(lastRun.timestamp)
+                    tvDistance.text = String.format(Locale.getDefault(), "%.2f km", lastRun.distanceInKm)
+
+                    val paceMin = lastRun.averagePace.toInt()
+                    val paceSec = ((lastRun.averagePace - paceMin) * 60).toInt()
+                    tvPace.text = String.format(Locale.getDefault(), "%d:%02d/km", paceMin, paceSec)
+
+                    val durationMin = lastRun.durationInMillis / 60000
+                    tvTime.text = String.format(Locale.getDefault(), "%d Min", durationMin)
+
+                    if (lastRun.mapSnapshotUrl != null) {
+                        ivMap.load(lastRun.mapSnapshotUrl) {
+                            placeholder(android.R.drawable.ic_dialog_map)
+                            error(android.R.drawable.ic_dialog_map)
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. ดึงข้อมูลจาก Supabase มาอัปเดตลง Room (ทำเบื้องหลัง)
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             try {
-                // Ask Supabase who is logged in
                 val currentUser = SupabaseManager.client.auth.currentUserOrNull()
-
                 if (currentUser != null) {
-                    // Fetch the real data from the Cloud
-                    val userRuns = SupabaseManager.getUserRunHistory(currentUser.id)
-
-                    withContext(Dispatchers.Main) {
-                        if (userRuns.isNotEmpty()) {
-                            val lastRun = userRuns.first()
-
-                            tvTitle.text = lastRun.title
-
-                            val sdf = SimpleDateFormat("dd/MM/yyyy 'at' hh:mm a", Locale.getDefault())
-                            tvDateTime.text = sdf.format(lastRun.timestamp)
-
-                            tvDistance.text = String.format(Locale.getDefault(), "%.2f km", lastRun.distanceInKm)
-
-                            val paceMin = lastRun.averagePace.toInt()
-                            val paceSec = ((lastRun.averagePace - paceMin) * 60).toInt()
-                            tvPace.text = String.format(Locale.getDefault(), "%d:%02d/km", paceMin, paceSec)
-
-                            val durationMin = lastRun.durationInMillis / 60000
-                            tvTime.text = String.format(Locale.getDefault(), "%d Min", durationMin)
-
-                            // Load the map screenshot using Coil
-                            if (lastRun.mapSnapshotUrl != null) {
-                                ivMap.load(lastRun.mapSnapshotUrl) {
-                                    placeholder(android.R.drawable.ic_dialog_map)
-                                    error(android.R.drawable.ic_dialog_map)
-                                }
-                            }
-                        }
+                    val cloudRuns = SupabaseManager.getUserRunHistory(currentUser.id)
+                    if (cloudRuns.isNotEmpty()) {
+                        // อัปเดตข้อมูลวิ่งทั้งหมดลง Room
+                        db.runDao().insertAllRuns(cloudRuns)
                     }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                android.util.Log.e("Dashboard", "Failed to load latest run: ${e.message}")
             }
         }
     }
@@ -173,18 +187,61 @@ class DashboardFragment : Fragment() {
         val tvHours = view.findViewById<TextView>(R.id.tvSleepAvgHours)
         val tvMins = view.findViewById<TextView>(R.id.tvSleepAvgMins)
 
-        // ดึงข้อมูลการนอนทั้งหมดเพื่อหาค่าเฉลี่ย
-        lifecycleScope.launch {
+        // Find the Compose Bridge
+        val composeView = view.findViewById<androidx.compose.ui.platform.ComposeView>(R.id.dashboard_sleep_chart)
+
+        //
+        composeView.setContent {
+            MaterialTheme {
+                SleepChartContent(
+                    records = dashboardSleepRecords,
+                    startOfWeek = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY)),
+                    selectedRecord = null,
+                    onRecordClick = {
+//                        val bottomNav = requireActivity().findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
+//                        bottomNav?.selectedItemId = R.id.nav_sleep
+                        (requireActivity() as MainActivity).switchFragment("sleep")
+
+                    }
+                )
+            }
+        }
+
+        // 1. ให้ UI เฝ้ามอง Room Database (ทำงานแบบ Real-time)
+        viewLifecycleOwner.lifecycleScope.launch {
             db.sleepDao().getAllSleepRecords().collectLatest { records ->
+
+                dashboardSleepRecords.clear()
+                dashboardSleepRecords.addAll(records)
+
                 if (records.isNotEmpty()) {
                     val avgTotalHours = records.map { it.totalHoursSlept }.average()
                     val hours = avgTotalHours.toInt()
                     val minutes = ((avgTotalHours - hours) * 60).toInt()
-                    
-                    // แสดงค่าเฉลี่ยเป็น ชั่วโมง และ นาที
+
                     tvHours.text = hours.toString()
                     tvMins.text = minutes.toString()
+                } else {
+                    tvHours.text = "0"
+                    tvMins.text = "0"
                 }
+            }
+        }
+
+        // 2. ดึงข้อมูลจาก Supabase มาอัปเดตลง Room (ทำเบื้องหลัง)
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val currentUser = SupabaseManager.client.auth.currentUserOrNull()
+                if (currentUser != null) {
+                    // ดึงข้อมูล Sleep ล่าสุดจาก Cloud
+                    val cloudSleepRecords = SupabaseManager.getUserSleepHistory(currentUser.id) // สมมติว่าใช้ชื่อฟังก์ชันนี้ใน SupabaseManager
+
+                    if (cloudSleepRecords.isNotEmpty()) {
+                        db.sleepDao().insertAllSleepRecords(cloudSleepRecords)
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }
