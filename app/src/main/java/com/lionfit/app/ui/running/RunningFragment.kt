@@ -169,6 +169,7 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
         Configuration.getInstance().userAgentValue = requireContext().packageName
         map = view.findViewById(R.id.map)
         map.setTileSource(TileSourceFactory.MAPNIK)
+        map.setBuiltInZoomControls(false)
         map.setMultiTouchControls(true)
 
         // Initialize MapTrackingManager
@@ -463,7 +464,7 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
         AlertDialog.Builder(requireContext())
             .setTitle("Do you want to stop tracking?")
             .setPositiveButton("Confirm") { _, _ ->
-                endRunAndNavigateToSave()
+                simulateFakeRun()
             }
             .setNegativeButton("Cancel") { dialogInterface, _ ->
                 dialogInterface.dismiss()
