@@ -34,7 +34,9 @@
 
     <LinearLayout
         android:id="@+id/llDisplayMode"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
         android:orientation="vertical"
@@ -157,8 +159,10 @@
 
     <LinearLayout
         android:id="@+id/llEditMode"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="0dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="16dp"
         android:orientation="vertical"
         android:visibility="gone"
@@ -187,24 +191,30 @@
             android:padding="16dp" />
 
         <EditText
-            android:id="@+id/etBirthDateEdit"
+            android:id="@+id/et_dob"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/bg_rounded_card"
-            android:hint="Birth Date (YYYY-MM-DD)"
-            android:inputType="date"
-            android:layout_marginBottom="12dp"
-            android:padding="16dp" />
 
-        <EditText
-            android:id="@+id/etGenderEdit"
+            android:background="@drawable/bg_rounded_card"
+            android:padding="16dp"
+            android:layout_marginBottom="12dp"
+
+            android:hint="Date of Birth"
+            android:focusable="false"
+            android:clickable="true"
+            android:cursorVisible="false" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/bg_rounded_card"
-            android:hint="Gender (e.g., Male, Female, Non-binary)"
-            android:inputType="textPersonName"
-            android:layout_marginBottom="12dp"
-            android:padding="16dp" />
+            android:layout_marginBottom="12dp" android:hint="Gender">
+
+            <AutoCompleteTextView
+                android:id="@+id/et_gender"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none" /> </com.google.android.material.textfield.TextInputLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -238,8 +248,10 @@
 
     <Button
         android:id="@+id/btnEditOrSave"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="60dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         android:backgroundTint="@color/lion_fit_yellow"
         android:layout_marginBottom="16dp"
         android:text="Edit Profile"
@@ -250,8 +262,10 @@
 
     <Button
         android:id="@+id/btnCancelOrLogout"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="56dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         android:backgroundTint="@color/save_button_black"
         android:layout_marginBottom="16dp"
         android:text="Log Out"

@@ -20,6 +20,9 @@ import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import android.app.DatePickerDialog
+import java.util.Calendar
+import java.util.Locale
 
 class AuthFragment : Fragment(R.layout.fragment_auth) {
 
@@ -39,6 +42,7 @@ class AuthFragment : Fragment(R.layout.fragment_auth) {
         val etFullName = view.findViewById<EditText>(R.id.etFullName)
         val etWeight = view.findViewById<EditText>(R.id.etWeight)
         val etHeight = view.findViewById<EditText>(R.id.etHeight)
+        val etSignupDob = view.findViewById<EditText>(R.id.et_signup_dob)
 
         // Toggle UI logic
         tvToggle.setOnClickListener {
@@ -54,6 +58,28 @@ class AuthFragment : Fragment(R.layout.fragment_auth) {
                 tvToggle.text = "Already have an account? Sign In"
                 llSignUpFields.visibility = View.VISIBLE // Show extra fields
             }
+        }
+
+        // Date of birth field
+        etSignupDob.setOnClickListener {
+            val calendar = Calendar.getInstance()
+            val year = calendar.get(Calendar.YEAR)
+            val month = calendar.get(Calendar.MONTH)
+            val day = calendar.get(Calendar.DAY_OF_MONTH)
+
+            val datePickerDialog = DatePickerDialog(
+                requireContext(),
+                { _, selectedYear, selectedMonth, selectedDay ->
+                    // The PostgreSQL standard format (YYYY-MM-DD):
+                    val formattedDate = String.format(Locale.getDefault(), "%04d-%02d-%02d", selectedYear, selectedMonth + 1, selectedDay)
+                    etSignupDob.setText(formattedDate)
+                },
+                year, month, day
+            )
+
+            // Prevent future dates
+            datePickerDialog.datePicker.maxDate = System.currentTimeMillis()
+            datePickerDialog.show()
         }
 
         btnSubmit.setOnClickListener {
@@ -82,8 +108,9 @@ class AuthFragment : Fragment(R.layout.fragment_auth) {
                         val name = etFullName.text.toString().trim()
                         val weight = etWeight.text.toString().toDoubleOrNull() ?: 0.0
                         val height = etHeight.text.toString().toDoubleOrNull() ?: 0.0
+                        val dob = etSignupDob.text.toString()
 
-                        if (name.isEmpty() || weight == 0.0 || height == 0.0) {
+                        if (name.isEmpty() || weight == 0.0 || height == 0.0 || dob.isEmpty()) {
                             withContext(Dispatchers.Main) {
                                 Toast.makeText(requireContext(), "Please fill in all profile fields correctly", Toast.LENGTH_SHORT).show()
                                 btnSubmit.isEnabled = true
@@ -104,6 +131,7 @@ class AuthFragment : Fragment(R.layout.fragment_auth) {
                         val userProfile = UserProfile(
                             id = newUserId,
                             fullName = name,
+                            birthDate = dob,
                             email = email,
                             weightKg = weight,
                             heightCm = height
