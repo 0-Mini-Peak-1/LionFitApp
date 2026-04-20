@@ -2,16 +2,15 @@ package com.lionfit.app.ui.sleep
 
 import android.annotation.SuppressLint
 import android.app.DatePickerDialog
+import android.content.Context
+import android.content.SharedPreferences
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
-import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -21,7 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,44 +34,33 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog as ComposeDialog
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.lionfit.app.R
-import kotlinx.coroutines.launch
-import java.time.DayOfWeek
-import java.time.Duration
-import java.time.Instant
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
-import java.time.ZoneId
+import java.time.*
 import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 
-// Define local colors
 val SleepBarColor = ComposeColor(0xFFBDA7EF)
 
 class SleepFragment : Fragment(R.layout.fragment_sleeping) {
 
-    // ใช้ Mock Data แทนเพื่อป้องกันแอปเด้งจากปัญหา Room Database_Impl
-    private val mockSleepRecords = mutableStateListOf<SleepMockRecord>()
+    private val sleepRecords = mutableStateListOf<SleepLocalRecord>()
     private var currentWeekStart by mutableStateOf(LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY)))
+    private val PREFS_NAME = "sleep_data_prefs"
+    private val KEY_RECORDS = "sleep_records_list"
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // ข้อมูลเริ่มต้นจำลอง
-        if (mockSleepRecords.isEmpty()) {
-            val today = LocalDate.now()
-            mockSleepRecords.add(SleepMockRecord(today.minusDays(1), LocalTime.of(22, 30), LocalTime.of(6, 30)))
-            mockSleepRecords.add(SleepMockRecord(today.minusDays(2), LocalTime.of(23, 0), LocalTime.of(7, 0)))
-            mockSleepRecords.add(SleepMockRecord(today.minusDays(3), LocalTime.of(21, 0), LocalTime.of(5, 0)))
-        }
+        // โหลดข้อมูลจริงจาก SharedPreferences
+        loadStoredData()
 
-        // ตั้งค่า ComposeView สำหรับกราฟ
-        view.findViewById<ComposeView>(R.id.chart_compose_view)?.apply {
+        val composeView = view.findViewById<ComposeView>(R.id.chart_compose_view)
+        composeView?.apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-
+            
             @SuppressLint("ClickableViewAccessibility")
             setOnTouchListener { v, event ->
                 when (event.action) {
@@ -90,18 +78,19 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
                 MaterialTheme {
                     var showAddDialog by remember { mutableStateOf(false) }
 
-                    LaunchedEffect(mockSleepRecords.size, currentWeekStart) {
-                        updateXmlStats(view, mockSleepRecords, currentWeekStart)
+                    // ใช้ sleepRecords.toList() เพื่อให้ตรวจจับการเปลี่ยนแปลงภายในลิสต์ได้ (แม้ขนาดเท่าเดิม)
+                    LaunchedEffect(sleepRecords.toList(), currentWeekStart) {
+                        updateXmlStats(view, sleepRecords, currentWeekStart)
                     }
 
                     Box(modifier = Modifier.fillMaxSize()) {
-                        SleepChartContent(records = mockSleepRecords, startOfWeek = currentWeekStart)
+                        SleepChartContent(records = sleepRecords, startOfWeek = currentWeekStart)
 
                         if (showAddDialog) {
                             AddSleepDialog(
                                 onDismiss = { showAddDialog = false },
                                 onSave = { newRecord ->
-                                    mockSleepRecords.add(newRecord)
+                                    checkOverlapAndSave(newRecord)
                                     showAddDialog = false
                                 }
                             )
@@ -117,12 +106,16 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
             }
         }
         
-        // ปุ่ม Info
-        view.findViewById<ImageButton>(R.id.btn_info)?.setOnClickListener {
-            showInfoDialog()
+        view.findViewById<ImageButton>(R.id.btn_prev_week)?.setOnClickListener {
+            currentWeekStart = currentWeekStart.minusWeeks(1)
         }
+
+        view.findViewById<ImageButton>(R.id.btn_next_week)?.setOnClickListener {
+            currentWeekStart = currentWeekStart.plusWeeks(1)
+        }
+
+        view.findViewById<ImageButton>(R.id.btn_info)?.setOnClickListener { showInfoDialog() }
         
-        // เพิ่มการคลิกที่ tv_date_range เพื่อเปลี่ยนสัปดาห์
         view.findViewById<TextView>(R.id.tv_date_range)?.setOnClickListener {
             val picker = DatePickerDialog(requireContext(), { _, y, m, d ->
                 val selectedDate = LocalDate.of(y, m + 1, d)
@@ -131,104 +124,133 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
             picker.show()
         }
     }
-    
-    private fun showInfoDialog() {
-        AlertDialog.Builder(requireContext())
-            .setTitle("Information")
-            .setMessage("เลือกเวลานอนของคุณ กราฟนี้จะแสดงชั่วโมงการนอนเฉลี่ยของคุณ 1 สัปดาห์")
-            .setPositiveButton("OK") { dialog, _ -> dialog.dismiss() }
-            .show()
+
+    private fun loadStoredData() {
+        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val json = prefs.getString(KEY_RECORDS, null)
+        if (json != null) {
+            val type = object : TypeToken<List<SleepLocalRecord>>() {}.type
+            val list: List<SleepLocalRecord> = Gson().fromJson(json, type)
+            sleepRecords.clear()
+            sleepRecords.addAll(list)
+        } else {
+            // ข้อมูลเริ่มต้นครั้งแรก
+            val today = LocalDate.now()
+            val initial = listOf(
+                SleepLocalRecord(today.minusDays(1).toString(), "22:30", "06:30"),
+                SleepLocalRecord(today.minusDays(2).toString(), "23:00", "07:00"),
+                SleepLocalRecord(today.minusDays(3).toString(), "21:00", "05:00")
+            )
+            sleepRecords.addAll(initial)
+            saveToPrefs()
+        }
     }
 
-    private fun updateXmlStats(rootView: View, records: List<SleepMockRecord>, startOfWeek: LocalDate) {
-        val endOfWeek = startOfWeek.plusDays(6)
-        
-        val recordsInWeek = records.filter {
-            (it.startDate >= startOfWeek && it.startDate <= endOfWeek) ||
-            (it.endDate >= startOfWeek && it.endDate <= endOfWeek)
+    private fun saveToPrefs() {
+        val prefs = requireContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val json = Gson().toJson(sleepRecords.toList())
+        prefs.edit().putString(KEY_RECORDS, json).apply()
+    }
+
+    private fun checkOverlapAndSave(newRecord: SleepLocalRecord) {
+        val newStartDT = newRecord.getStartDT()
+        val newEndDT = newRecord.getEndDT()
+
+        val overlapping = sleepRecords.filter { existing ->
+            newStartDT.isBefore(existing.getEndDT()) && newEndDT.isAfter(existing.getStartDT())
         }
         
-        val totalMinutes = recordsInWeek.sumOf { it.durationMinutes }
-        val daysWithData = recordsInWeek.map { it.startDate }.distinct().size
-        
-        val avgTotalMinutes = if (daysWithData > 0) totalMinutes / daysWithData else 0L
-        val displayHours = avgTotalMinutes / 60
-        val displayMinutes = avgTotalMinutes % 60
+        if (overlapping.isNotEmpty()) {
+            AlertDialog.Builder(requireContext())
+                .setTitle("แจ้งเตือน")
+                .setMessage("คุณเคยเลือกเวลานี้แล้วต้องการไปต่อไหม")
+                .setPositiveButton("ไปต่อ") { _, _ ->
+                    sleepRecords.removeAll(overlapping)
+                    sleepRecords.add(newRecord)
+                    saveToPrefs()
+                }
+                .setNegativeButton("ยกเลิก") { d, _ -> d.dismiss() }
+                .show()
+        } else {
+            sleepRecords.add(newRecord)
+            saveToPrefs()
+        }
+    }
 
-        rootView.findViewById<TextView>(R.id.tv_avg_hours)?.text = displayHours.toString()
-        rootView.findViewById<TextView>(R.id.tv_avg_minutes)?.text = displayMinutes.toString()
+    private fun updateXmlStats(rootView: View, records: List<SleepLocalRecord>, startOfWeek: LocalDate) {
+        val endOfWeek = startOfWeek.plusDays(6)
+        val weekStartDT = startOfWeek.atStartOfDay()
+        val weekEndDT = endOfWeek.atTime(LocalTime.MAX)
+
+        val recordsInWeek = records.filter {
+            it.getStartDT().isBefore(weekEndDT) && it.getEndDT().isAfter(weekStartDT)
+        }
+
+        var totalMinutesInWeek = 0L
+        recordsInWeek.forEach { record ->
+            val actualStart = if (record.getStartDT().isBefore(weekStartDT)) weekStartDT else record.getStartDT()
+            val actualEnd = if (record.getEndDT().isAfter(weekEndDT)) weekEndDT else record.getEndDT()
+            if (actualStart.isBefore(actualEnd)) {
+                totalMinutesInWeek += Duration.between(actualStart, actualEnd).toMinutes()
+            }
+        }
+
+        val avgTotalMinutes = totalMinutesInWeek / 7
+        rootView.findViewById<TextView>(R.id.tv_avg_hours)?.text = (avgTotalMinutes / 60).toString()
+        rootView.findViewById<TextView>(R.id.tv_avg_minutes)?.text = (avgTotalMinutes % 60).toString()
         rootView.findViewById<TextView>(R.id.tv_date_range)?.text = 
             "${startOfWeek.format(DateTimeFormatter.ofPattern("dd"))} - ${endOfWeek.format(DateTimeFormatter.ofPattern("dd MMM yyyy"))}"
     }
 
-    private data class SleepMockRecord(
-        val startDate: LocalDate,
-        val startTime: LocalTime,
-        val endTime: LocalTime
+    private fun showInfoDialog() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Information")
+            .setMessage("เลือกเวลานอนของคุณ กราฟนี้จะแสดงชั่วโมงการนอนเฉลี่ยของคุณ 1 สัปดาห์")
+            .setPositiveButton("OK") { d, _ -> d.dismiss() }
+            .show()
+    }
+
+    // Data Class สำหรับเก็บข้อมูลลง Prefs (เป็น String เพื่อให้ Gson ทำงานง่าย)
+    private data class SleepLocalRecord(
+        val dateStr: String, // ISO Date
+        val startTimeStr: String, // HH:mm
+        val endTimeStr: String // HH:mm
     ) {
-        val endDate: LocalDate get() = if (endTime.isBefore(startTime)) startDate.plusDays(1) else startDate
-        val durationMinutes: Long get() {
-            val start = startDate.atTime(startTime)
-            val end = endDate.atTime(endTime)
-            return Duration.between(start, end).toMinutes()
+        fun getStartDate(): LocalDate = LocalDate.parse(dateStr)
+        fun getStartTime(): LocalTime = LocalTime.parse(startTimeStr)
+        fun getEndTime(): LocalTime = LocalTime.parse(endTimeStr)
+        fun getStartDT(): LocalDateTime = getStartDate().atTime(getStartTime())
+        fun getEndDT(): LocalDateTime {
+            val endDT = getStartDate().atTime(getEndTime())
+            return if (getEndTime().isBefore(getStartTime())) endDT.plusDays(1) else endDT
         }
     }
 
     @Composable
-    private fun SleepChartContent(records: List<SleepMockRecord>, startOfWeek: LocalDate) {
+    private fun SleepChartContent(records: List<SleepLocalRecord>, startOfWeek: LocalDate) {
         val daysLabels = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
-        val scrollState = rememberScrollState()
         val hourHeight = 45.dp 
         
         Column(modifier = Modifier.fillMaxSize()) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(scrollState)
-            ) {
-                Box(modifier = Modifier
-                    .fillMaxWidth()
-                    .height(hourHeight * 24)
-                    .background(ComposeColor.Transparent)
-                    .padding(vertical = 16.dp, horizontal = 8.dp)
-                ) {
+            Box(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                Box(modifier = Modifier.fillMaxWidth().height(hourHeight * 24).padding(vertical = 16.dp, horizontal = 8.dp)) {
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        for (i in 0..24) {
-                            Box(modifier = Modifier.height(hourHeight)) {
-                                HorizontalDivider(color = ComposeColor.Gray.copy(alpha = 0.08f), thickness = 1.dp)
-                            }
-                        }
+                        repeat(25) { Box(modifier = Modifier.height(hourHeight)) { HorizontalDivider(color = ComposeColor.Gray.copy(alpha = 0.1f)) } }
                     }
-                    
-                    Row(modifier = Modifier.fillMaxWidth()) {
+                    Row(modifier = Modifier.fillMaxSize()) {
                         Column(modifier = Modifier.width(40.dp)) {
-                            for (i in 0..24) {
-                                Box(modifier = Modifier.height(hourHeight), contentAlignment = Alignment.TopStart) {
-                                    Text(String.format(Locale.getDefault(), "%02d:00", i), color = ComposeColor.LightGray, fontSize = 10.sp)
-                                }
-                            }
+                            repeat(25) { i -> Box(modifier = Modifier.height(hourHeight)) { Text(String.format(Locale.getDefault(), "%02d:00", i), color = ComposeColor.LightGray, fontSize = 10.sp) } }
                         }
-
-                        Row(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(hourHeight * 24),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
+                        Row(modifier = Modifier.weight(1f).fillMaxHeight(), horizontalArrangement = Arrangement.SpaceBetween) {
                             daysLabels.forEachIndexed { index, _ ->
                                 val currentDate = startOfWeek.plusDays(index.toLong())
                                 Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                                    Box(modifier = Modifier.fillMaxHeight().width(0.5.dp).background(ComposeColor.Gray.copy(alpha = 0.05f)).align(Alignment.CenterStart))
-                                    
+                                    VerticalDivider(modifier = Modifier.align(Alignment.CenterStart), color = ComposeColor.Gray.copy(alpha = 0.05f))
                                     records.forEach { record ->
-                                        if (record.startDate == currentDate && record.endDate == currentDate) {
-                                            DrawSleepBar(record.startTime, record.endTime, hourHeight, Alignment.TopCenter)
-                                        }
-                                        else if (record.startDate == currentDate && record.endDate > currentDate) {
-                                            DrawSleepBar(record.startTime, LocalTime.MAX, hourHeight, Alignment.TopCenter)
-                                        }
-                                        else if (record.startDate < currentDate && record.endDate == currentDate) {
-                                            DrawSleepBar(LocalTime.MIN, record.endTime, hourHeight, Alignment.TopCenter)
+                                        if (record.getStartDate() == currentDate) {
+                                            DrawSleepBar(record.getStartTime(), if (record.getEndTime().isBefore(record.getStartTime())) LocalTime.MAX else record.getEndTime(), hourHeight, Alignment.TopCenter)
+                                        } else if (record.getStartDate().plusDays(1) == currentDate && record.getEndTime().isBefore(record.getStartTime())) {
+                                            DrawSleepBar(LocalTime.MIN, record.getEndTime(), hourHeight, Alignment.TopCenter)
                                         }
                                     }
                                 }
@@ -237,10 +259,8 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
                     }
                 }
             }
-            Row(modifier = Modifier.fillMaxWidth().padding(start = 48.dp, end = 16.dp, top = 8.dp, bottom = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                daysLabels.forEach { day -> 
-                    Text(day, color = ComposeColor.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                }
+            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).padding(start = 40.dp)) {
+                daysLabels.forEach { Text(it, color = ComposeColor.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center) }
             }
         }
     }
@@ -250,87 +270,46 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
         val startMin = startTime.toSecondOfDay() / 60f
         val endMin = if (endTime == LocalTime.MAX) 1440f else endTime.toSecondOfDay() / 60f
         val durationMin = endMin - startMin
-        
         val startPos = (startMin / 60f) * hourHeight.value
         val durationHeight = (durationMin / 60f) * hourHeight.value
-        
-        Box(modifier = Modifier
-            .padding(top = startPos.dp)
-            .width(24.dp)
-            .height(durationHeight.dp)
-            .align(alignment)
-            .clip(RoundedCornerShape(6.dp))
-            .background(SleepBarColor)
-        )
+        Box(modifier = Modifier.padding(top = startPos.dp).width(20.dp).height(durationHeight.dp).align(alignment).clip(RoundedCornerShape(4.dp)).background(SleepBarColor))
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    private fun AddSleepDialog(onDismiss: () -> Unit, onSave: (SleepMockRecord) -> Unit) {
+    private fun AddSleepDialog(onDismiss: () -> Unit, onSave: (SleepLocalRecord) -> Unit) {
         var startDate by remember { mutableStateOf(LocalDate.now()) }
         var startTime by remember { mutableStateOf(LocalTime.of(22, 0)) }
-        var endDate by remember { mutableStateOf(LocalDate.now().plusDays(1)) }
         var endTime by remember { mutableStateOf(LocalTime.of(7, 0)) }
-        
         var showDatePicker by remember { mutableStateOf(false) }
         var showTimeWheel by remember { mutableStateOf(false) }
         var pickingStart by remember { mutableStateOf(true) }
 
         ComposeDialog(onDismissRequest = onDismiss) {
-            Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = ComposeColor.White)) {
-                Box(modifier = Modifier.fillMaxWidth().padding(24.dp)) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("ADD TIME SLEEP", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                        Spacer(modifier = Modifier.height(24.dp))
-                        
-                        Column(modifier = Modifier.fillMaxWidth().background(ComposeColor(0xFFF2F2F7), RoundedCornerShape(16.dp)).clip(RoundedCornerShape(16.dp))) {
-                            AddSleepRow("Starts", startDate, startTime) { isDate -> 
-                                pickingStart = true
-                                if (isDate) showDatePicker = true else showTimeWheel = true 
-                            }
-                            HorizontalDivider(color = ComposeColor.White, thickness = 1.dp)
-                            AddSleepRow("Ends", endDate, endTime) { isDate -> 
-                                pickingStart = false
-                                if (isDate) showDatePicker = true else showTimeWheel = true 
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(32.dp))
-                        
-                        Button(
-                            onClick = { 
-                                onSave(SleepMockRecord(startDate, startTime, endTime))
-                            },
-                            modifier = Modifier.size(64.dp),
-                            shape = CircleShape,
-                            colors = ButtonDefaults.buttonColors(containerColor = ComposeColor.Black)
-                        ) {
-                            Icon(Icons.Default.Check, contentDescription = "Save", tint = ComposeColor.White)
-                        }
+            Card(modifier = Modifier.fillMaxWidth().padding(16.dp), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = ComposeColor.White)) {
+                Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("ADD TIME SLEEP", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Column(modifier = Modifier.fillMaxWidth().background(ComposeColor(0xFFF2F2F7), RoundedCornerShape(16.dp)).clip(RoundedCornerShape(16.dp))) {
+                        AddSleepRow("Starts", startDate, startTime) { isDate -> pickingStart = true; if (isDate) showDatePicker = true else showTimeWheel = true }
+                        HorizontalDivider(color = ComposeColor.White)
+                        val endDate = if (endTime.isBefore(startTime)) startDate.plusDays(1) else startDate
+                        AddSleepRow("Ends", endDate, endTime) { isDate -> pickingStart = false; if (isDate) showDatePicker = true else showTimeWheel = true }
                     }
-                    if (showTimeWheel) {
-                        Box(modifier = Modifier.padding(top = 80.dp).align(Alignment.TopCenter)) {
-                            Surface(modifier = Modifier.width(200.dp), color = ComposeColor.White, shape = RoundedCornerShape(16.dp), shadowElevation = 8.dp) {
-                                TimeWheelSelector(initialTime = if (pickingStart) startTime else endTime, onTimeSelected = { 
-                                    if (pickingStart) startTime = it else endTime = it
-                                    showTimeWheel = false 
-                                })
-                            }
-                        }
+                    Spacer(modifier = Modifier.height(32.dp))
+                    Button(onClick = { 
+                        onSave(SleepLocalRecord(startDate.toString(), startTime.toString(), endTime.toString()))
+                    }, modifier = Modifier.size(56.dp), shape = CircleShape, colors = ButtonDefaults.buttonColors(containerColor = ComposeColor.Black), contentPadding = PaddingValues(0.dp)) {
+                        Icon(Icons.Default.Check, contentDescription = "Save", tint = ComposeColor.White)
                     }
                 }
+                if (showTimeWheel) { TimeWheelSelector(initialTime = if (pickingStart) startTime else endTime, onTimeSelected = { if (pickingStart) startTime = it else endTime = it; showTimeWheel = false }) }
             }
         }
         if (showDatePicker) {
             val ctx = requireContext()
             SideEffect {
-                val currentPickerDate = if (pickingStart) startDate else endDate
-                val picker = DatePickerDialog(ctx, { _, y, m, d ->
-                    val date = LocalDate.of(y, m + 1, d)
-                    if (pickingStart) startDate = date else endDate = date
-                    showDatePicker = false
-                }, currentPickerDate.year, currentPickerDate.monthValue - 1, currentPickerDate.dayOfMonth)
-                picker.setOnCancelListener { showDatePicker = false }
-                picker.show()
+                DatePickerDialog(ctx, { _, y, m, d -> startDate = LocalDate.of(y, m + 1, d); showDatePicker = false }, startDate.year, startDate.monthValue - 1, startDate.dayOfMonth).show()
             }
         }
     }
@@ -347,7 +326,7 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
 
     @Composable
     private fun PillButton(text: String, onClick: () -> Unit) {
-        Surface(onClick = onClick, color = ComposeColor(0xFFE5E5EA), shape = RoundedCornerShape(12.dp)) {
+        Surface(onClick = onClick, color = ComposeColor(0xFFE5E5EA), shape = RoundedCornerShape(8.dp)) {
             Text(text, color = ComposeColor.Black, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), fontSize = 14.sp, fontWeight = FontWeight.Bold)
         }
     }
@@ -356,13 +335,16 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
     private fun TimeWheelSelector(initialTime: LocalTime, onTimeSelected: (LocalTime) -> Unit) {
         var h by remember { mutableIntStateOf(initialTime.hour) }
         var m by remember { mutableIntStateOf(initialTime.minute) }
-        Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(modifier = Modifier.height(150.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                Wheel(0..23, h) { h = it }; Text(":", fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp)); Wheel(0..59, m) { m = it }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = { onTimeSelected(LocalTime.of(h, m)) }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = ComposeColor.Black), shape = RoundedCornerShape(12.dp)) {
-                Text("Confirm", color = ComposeColor.White)
+        ComposeDialog(onDismissRequest = { }) {
+            Surface(shape = RoundedCornerShape(16.dp), color = ComposeColor.White) {
+                Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Row(modifier = Modifier.height(150.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Wheel(0..23, h) { h = it }; Text(":", fontSize = 24.sp, fontWeight = FontWeight.Bold); Wheel(0..59, m) { m = it }
+                    }
+                    Button(onClick = { onTimeSelected(LocalTime.of(h, m)) }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = ComposeColor.Black)) {
+                        Text("Confirm")
+                    }
+                }
             }
         }
     }
@@ -371,19 +353,11 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
     private fun Wheel(range: IntRange, current: Int, onValueChange: (Int) -> Unit) {
         val state = rememberLazyListState(initialFirstVisibleItemIndex = current)
         val firstVisibleIndex by remember { derivedStateOf { state.firstVisibleItemIndex } }
-        
-        LaunchedEffect(firstVisibleIndex) { onValueChange(firstVisibleIndex) }
-        
-        Box(modifier = Modifier.width(50.dp).height(150.dp)) {
-            LazyColumn(state = state, contentPadding = PaddingValues(vertical = 60.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        LaunchedEffect(firstVisibleIndex) { onValueChange(firstVisibleIndex % range.count()) }
+        Box(modifier = Modifier.width(60.dp).height(150.dp)) {
+            LazyColumn(state = state, contentPadding = PaddingValues(vertical = 60.dp)) {
                 items(range.toList()) { n ->
-                    Text(
-                        text = String.format(Locale.getDefault(), "%02d", n), 
-                        fontSize = if (n == firstVisibleIndex) 24.sp else 16.sp, 
-                        color = if (n == firstVisibleIndex) ComposeColor.Black else ComposeColor.LightGray, 
-                        modifier = Modifier.padding(4.dp),
-                        fontWeight = if (n == firstVisibleIndex) FontWeight.Bold else FontWeight.Normal
-                    )
+                    Text(text = String.format(Locale.getDefault(), "%02d", n), fontSize = if (n == firstVisibleIndex % range.count()) 24.sp else 18.sp, color = if (n == firstVisibleIndex % range.count()) ComposeColor.Black else ComposeColor.LightGray, modifier = Modifier.padding(8.dp).fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 }
             }
         }
