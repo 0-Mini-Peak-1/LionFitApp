@@ -17,6 +17,7 @@ class FoodResultAdapter(
     inner class VH(view: View) : RecyclerView.ViewHolder(view) {
         val tvName: TextView    = view.findViewById(R.id.tvFoodResultName)
         val chipCal: Chip       = view.findViewById(R.id.chipResultCal)
+        val tvMacros: TextView  = view.findViewById(R.id.tvMacros)
         val tvServing: TextView = view.findViewById(R.id.tvServing)
         val btnMinus: ImageButton = view.findViewById(R.id.btnMinus)
         val btnPlus: ImageButton  = view.findViewById(R.id.btnPlus)
@@ -36,6 +37,7 @@ class FoodResultAdapter(
 
         holder.tvName.text  = food.name
         holder.chipCal.text = ctx.getString(R.string.chip_cal_short, food.calories)
+        holder.tvMacros.text = "P: ${food.protein}g | F: ${food.fat}g | C: ${food.carbs}g"
         holder.tvServing.text = food.serving
         
         holder.tvQuantity.text = food.selectedQuantity.toString()

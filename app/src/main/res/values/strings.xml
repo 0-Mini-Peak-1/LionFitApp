@@ -39,6 +39,8 @@
     <!-- Buttons -->
     <string name="btn_add">Add</string>
     <string name="btn_done">Done</string>
+    <string name="btn_sign_in">Sign In</string>
+    <string name="btn_sign_up">Sign Up</string>
 
     <!-- Toasts -->
     <string name="toast_open_food_search">เปิดหน้าค้นหาอาหาร...</string>
@@ -46,6 +48,12 @@
 
     <!-- Hints -->
     <string name="hint_search_food">Search food...</string>
+    <string name="hint_dob">Date of Birth</string>
+    <string name="hint_full_name">Full Name</string>
+    <string name="hint_weight">Weight (kg)</string>
+    <string name="hint_height">Height (cm)</string>
+    <string name="hint_email">Email</string>
+    <string name="hint_password">Password</string>
 
     <!-- Formats -->
     <string name="format_kcal">%d kcal</string>

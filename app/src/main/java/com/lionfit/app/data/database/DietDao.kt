@@ -18,6 +18,9 @@ interface DietDao {
     @Query("SELECT SUM(calories) FROM diet_logs_table WHERE date_logged >= :start AND date_logged <= :end")
     fun getTotalCaloriesForRange(start: Long, end: Long): Flow<Int?>
 
-    @Query("SELECT DISTINCT (date_logged / 86400000) * 86400000 FROM diet_logs_table")
-    fun getDatesWithLogs(): Flow<List<Long>>
+    @Query("SELECT DISTINCT strftime('%Y-%m-%d', date_logged / 1000, 'unixepoch', 'localtime') FROM diet_logs_table")
+    fun getDatesWithLogs(): Flow<List<String>>
+
+    @Query("DELETE FROM diet_logs_table WHERE id = :id")
+    suspend fun deleteById(id: String)
 }

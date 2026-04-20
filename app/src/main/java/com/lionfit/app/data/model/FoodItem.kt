@@ -7,6 +7,8 @@ data class FoodItem(
     val id: Int? = null,
     val name: String,
     val calories: Int,
-    val category: String? = null,
-    val image_url: String? = null
+    val fat: Int = 0,
+    val carb: Int = 0,
+    val protein: Int = 0,
+    val serving_size: String = "1 serving"
 )
