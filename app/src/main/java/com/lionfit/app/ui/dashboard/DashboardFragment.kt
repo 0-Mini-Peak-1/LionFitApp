@@ -1,4 +1,4 @@
-package com.lionfit.app.ui.Dashboard
+package com.lionfit.app.ui.dashboard
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -16,12 +16,16 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import com.lionfit.app.data.database.SupabaseManager
+import io.github.jan.supabase.gotrue.auth
 
 /**
  * Fragment สำหรับแสดงหน้า Dashboard หลักของแอปพลิเคชัน
  * แสดงข้อมูลสรุปจากส่วนต่างๆ เช่น อาหาร, การวิ่ง และการนอน
  */
-class DashboardMenu : Fragment() {
+class DashboardFragment : Fragment() {
 
     // เชื่อมต่อกับฐานข้อมูล Room
     private val db by lazy { AppDatabase.getDatabase(requireContext()) }
@@ -107,35 +111,47 @@ class DashboardMenu : Fragment() {
         val tvPace = view.findViewById<TextView>(R.id.tvRunPace)
         val tvTime = view.findViewById<TextView>(R.id.tvRunTime)
 
-        // ดึงข้อมูลการวิ่งที่บันทึกไว้ล่าสุด
-        lifecycleScope.launch {
-            db.runDao().getAllRunsSortedByDate().collectLatest { runs ->
-                if (runs.isNotEmpty()) {
-                    val lastRun = runs.first()
-                    tvTitle.text = lastRun.title
-                    
-                    // แปลงรูปแบบวันที่และเวลา
-                    val sdf = SimpleDateFormat("dd/MM/yyyy 'at' hh:mm a", Locale.getDefault())
-                    tvDateTime.text = sdf.format(lastRun.timestamp)
-                    
-                    // แสดงระยะทางและ Pace
-                    tvDistance.text = String.format(Locale.getDefault(), "%.2f km", lastRun.distanceInKm)
-                    
-                    val paceMin = lastRun.averagePace.toInt()
-                    val paceSec = ((lastRun.averagePace - paceMin) * 60).toInt()
-                    tvPace.text = String.format(Locale.getDefault(), "%d:%02d/km", paceMin, paceSec)
-                    
-                    // แสดงเวลาที่ใช้ในการวิ่ง (แปลงจากมิลลิวินาทีเป็นนาที)
-                    val durationMin = lastRun.durationInMillis / 60000
-                    tvTime.text = String.format(Locale.getDefault(), "%d Min", durationMin)
+        // Use viewLifecycleOwner to prevent memory leaks when switching tabs
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                // Ask Supabase who is logged in
+                val currentUser = SupabaseManager.client.auth.currentUserOrNull()
 
-                    // โหลดรูปภาพเส้นทางวิ่ง (Map Snapshot)
-                    lastRun.mapSnapshotUrl?.let { url ->
-                        ivMap.load(url) {
-                            placeholder(android.R.drawable.ic_dialog_map)
+                if (currentUser != null) {
+                    // Fetch the real data from the Cloud
+                    val userRuns = SupabaseManager.getUserRunHistory(currentUser.id)
+
+                    withContext(Dispatchers.Main) {
+                        if (userRuns.isNotEmpty()) {
+                            val lastRun = userRuns.first()
+
+                            tvTitle.text = lastRun.title
+
+                            val sdf = SimpleDateFormat("dd/MM/yyyy 'at' hh:mm a", Locale.getDefault())
+                            tvDateTime.text = sdf.format(lastRun.timestamp)
+
+                            tvDistance.text = String.format(Locale.getDefault(), "%.2f km", lastRun.distanceInKm)
+
+                            val paceMin = lastRun.averagePace.toInt()
+                            val paceSec = ((lastRun.averagePace - paceMin) * 60).toInt()
+                            tvPace.text = String.format(Locale.getDefault(), "%d:%02d/km", paceMin, paceSec)
+
+                            val durationMin = lastRun.durationInMillis / 60000
+                            tvTime.text = String.format(Locale.getDefault(), "%d Min", durationMin)
+
+                            // Load the map screenshot using Coil
+                            if (lastRun.mapSnapshotUrl != null) {
+                                ivMap.load(lastRun.mapSnapshotUrl) {
+                                    placeholder(android.R.drawable.ic_dialog_map)
+                                    error(android.R.drawable.ic_dialog_map)
+                                }
+                            }
                         }
                     }
                 }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                android.util.Log.e("Dashboard", "Failed to load latest run: ${e.message}")
             }
         }
     }
