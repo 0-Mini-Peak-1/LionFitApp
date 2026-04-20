@@ -47,6 +47,16 @@ class DashboardFragment : Fragment() {
         observeDietData(view)
         observeRunData(view)
         observeSleepData(view)
+        val swipeRefreshLayout = view.findViewById<androidx.swiperefreshlayout.widget.SwipeRefreshLayout>(R.id.swipeRefreshLayout)
+        swipeRefreshLayout.setOnRefreshListener {
+            // เมื่อดึงลงมา ให้สั่งโหลดข้อมูลใหม่ทั้งหมด
+            observeDietData(view)
+            observeRunData(view)
+            observeSleepData(view)
+
+            // ปิดตัวหมุนรีเฟรชเมื่อทำงานเสร็จ (ในกรณีนี้คำสั่งทำงานเร็วมาก สามารถสั่งปิดได้เลย)
+            swipeRefreshLayout.isRefreshing = false
+        }
     }
 
     /**
