@@ -24,6 +24,11 @@ import io.github.jan.supabase.gotrue.auth
 import androidx.fragment.app.activityViewModels
 import coil.load
 import com.lionfit.app.ui.shared.SharedViewModel
+import android.app.DatePickerDialog
+import java.util.Calendar
+import java.util.Locale
+import android.widget.ArrayAdapter
+import android.widget.AutoCompleteTextView
 
 class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
@@ -42,7 +47,7 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
     private lateinit var tvPhoneDisplay: TextView
     private lateinit var tvBirthDateDisplay: TextView
     private lateinit var tvGenderDisplay: TextView
-    private lateinit var etGenderEdit: EditText
+    private lateinit var etGenderEdit: AutoCompleteTextView
     private lateinit var tvHeightDisplay: TextView
     private lateinit var tvWeightDisplay: TextView
     private lateinit var btnEditOrSave: Button
@@ -51,7 +56,7 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
     // Edit fields
     private lateinit var etNameEdit: EditText
     private lateinit var etPhoneEdit: EditText
-    private lateinit var etBirthDateEdit: EditText // For now, simple text input for date
+    private lateinit var etBirthDateEdit: EditText
     private lateinit var etHeightEdit: EditText
     private lateinit var etWeightEdit: EditText
     private lateinit var btnChangePic: Button
@@ -97,7 +102,6 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
         setupButtonListeners()
     }
 
-    // (This XML code will be in step 5)
     private fun initializeViews(view: View) {
         llDisplayMode = view.findViewById(R.id.llDisplayMode)
         llEditMode = view.findViewById(R.id.llEditMode)
@@ -113,14 +117,22 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
         etNameEdit = view.findViewById(R.id.etNameEdit)
         etPhoneEdit = view.findViewById(R.id.etPhoneEdit)
-        etBirthDateEdit = view.findViewById(R.id.etBirthDateEdit)
-        etGenderEdit = view.findViewById(R.id.etGenderEdit)
+        etBirthDateEdit = view.findViewById(R.id.et_dob)
+        etGenderEdit = view.findViewById(R.id.et_gender)
         etHeightEdit = view.findViewById(R.id.etHeightEdit)
         etWeightEdit = view.findViewById(R.id.etWeightEdit)
 
         btnChangePic = view.findViewById(R.id.btnChangePic)
         btnEditOrSave = view.findViewById(R.id.btnEditOrSave)
         btnCancelOrLogout = view.findViewById(R.id.btnCancelOrLogout)
+
+        val genderOptions = arrayOf("Male", "Female", "Other", "Prefer not to say")
+        val dropdownAdapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_dropdown_item_1line,
+            genderOptions
+        )
+        etGenderEdit.setAdapter(dropdownAdapter)
     }
 
     private fun setupButtonListeners() {
@@ -151,6 +163,50 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
             val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
             pickImage.launch(intent)
         }
+
+        etBirthDateEdit.setOnClickListener {
+            val calendar = Calendar.getInstance()
+            val currentDobText = etBirthDateEdit.text.toString().trim()
+
+            // Check if they already have a date saved
+            if (currentDobText.isNotEmpty() && currentDobText.contains("-")) {
+                try {
+                    // Split "1995-08-24" into [1995, 08, 24]
+                    val parts = currentDobText.split("-")
+                    if (parts.size == 3) {
+                        val parsedYear = parts[0].toInt()
+                        val parsedMonth = parts[1].toInt() - 1 // Calendar months are 0-indexed (Jan = 0)
+                        val parsedDay = parts[2].toInt()
+
+                        // Set the calendar to the user's saved date
+                        calendar.set(parsedYear, parsedMonth, parsedDay)
+                    }
+                } catch (e: Exception) {
+                    // If the text was weirdly formatted, just fallback to 20 years ago
+                    calendar.add(Calendar.YEAR, -20)
+                }
+            } else {
+                // If the field is totally empty, default to 20 years ago
+                calendar.add(Calendar.YEAR, -20)
+            }
+
+            val year = calendar.get(Calendar.YEAR)
+            val month = calendar.get(Calendar.MONTH)
+            val day = calendar.get(Calendar.DAY_OF_MONTH)
+
+            val datePickerDialog = DatePickerDialog(
+                requireContext(),
+                { _, selectedYear, selectedMonth, selectedDay ->
+                    // Keep the PostgreSQL standard format
+                    val formattedDate = String.format(Locale.getDefault(), "%04d-%02d-%02d", selectedYear, selectedMonth + 1, selectedDay)
+                    etBirthDateEdit.setText(formattedDate)
+                },
+                year, month, day
+            )
+
+            datePickerDialog.datePicker.maxDate = System.currentTimeMillis()
+            datePickerDialog.show()
+        }
     }
 
     private fun toggleEditingMode(editing: Boolean) {
@@ -167,7 +223,7 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
             etNameEdit.setText(currentProfile?.fullName ?: "")
             etPhoneEdit.setText(currentProfile?.phoneNumber ?: "")
             etBirthDateEdit.setText(currentProfile?.birthDate ?: "")
-            etGenderEdit.setText(currentProfile?.gender ?: "")
+            etGenderEdit.setText(currentProfile?.gender ?: "", false)
             etHeightEdit.setText(currentProfile?.heightCm?.toString() ?: "0.0")
             etWeightEdit.setText(currentProfile?.weightKg?.toString() ?: "0.0")
 

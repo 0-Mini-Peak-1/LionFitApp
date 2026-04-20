@@ -1,5 +1,6 @@
 package com.lionfit.app.ui.running
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
@@ -28,6 +29,7 @@ import org.osmdroid.views.MapView
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import java.io.ByteArrayOutputStream
+import android.view.MotionEvent
 
 class SaveActivityFragment : Fragment(R.layout.fragment_save_activity) {
 
@@ -40,6 +42,7 @@ class SaveActivityFragment : Fragment(R.layout.fragment_save_activity) {
     private lateinit var etDescription: EditText
     private lateinit var spinnerType: Spinner
     private lateinit var tvDistance: TextView
+    private lateinit var tvSaveCalories: TextView
     private lateinit var tvPace: TextView
     private lateinit var tvTime: TextView
     private lateinit var btnSave: MaterialButton
@@ -61,9 +64,60 @@ class SaveActivityFragment : Fragment(R.layout.fragment_save_activity) {
             }
         }
 
+        // Resume button
+        val btnResume = view.findViewById<TextView>(R.id.tvResume)
+        @android.annotation.SuppressLint("ClickableViewAccessibility")
+        btnResume.setOnTouchListener { resumeView, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    resumeView.animate()
+                        .scaleX(0.9f)
+                        .scaleY(0.9f)
+                        .setDuration(100)
+                        .start()
+                    true // Tells Android we consumed this touch event
+                }
+
+                MotionEvent.ACTION_UP -> {
+                    // Bounce back to normal size
+                    resumeView.performClick() // For accessibility
+                    resumeView.animate()
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setDuration(150) // Slightly longer for a smoother release
+                        .start()
+
+                    // Execute the resume logic INSTANTLY to eliminate the "freeze"
+                    sharedViewModel.pendingRunSession.value = null
+
+                    val resumeIntent = android.content.Intent(requireContext(), com.lionfit.app.services.TrackingService::class.java).apply {
+                        action = com.lionfit.app.services.TrackingService.ACTION_START_OR_RESUME_SERVICE
+                    }
+                    requireContext().startService(resumeIntent)
+
+                    (requireActivity() as MainActivity).switchFragment("running")
+
+                    true
+                }
+
+                // 3. FINGER DRAGS OFF: They changed their mind and swiped away
+                MotionEvent.ACTION_CANCEL -> {
+                    // Just bounce back to normal size, don't trigger the resume
+                    resumeView.animate()
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setDuration(150)
+                        .start()
+                    true
+                }
+
+                else -> false
+            }
+        }
+
+        // Save run button
         btnSave.setOnClickListener {
             val currentSession = sharedViewModel.pendingRunSession.value
-
             if (currentSession != null) {
                 btnSave.isEnabled = false
                 btnSave.text = "Saving..."
@@ -127,6 +181,7 @@ class SaveActivityFragment : Fragment(R.layout.fragment_save_activity) {
         etDescription = view.findViewById(R.id.etActivityDescription)
         spinnerType = view.findViewById(R.id.spinnerActivityType)
         tvDistance = view.findViewById(R.id.tvFinalDistance)
+        tvSaveCalories = view.findViewById<TextView>(R.id.tvSaveCalories)
         tvPace = view.findViewById(R.id.tvFinalPace)
         tvTime = view.findViewById(R.id.tvFinalTime)
         btnSave = view.findViewById(R.id.btnSaveActivity)
@@ -149,6 +204,7 @@ class SaveActivityFragment : Fragment(R.layout.fragment_save_activity) {
         val paceSeconds = ((rawPace - paceMinutes) * 60f).toInt()
         val finalPaceString = String.format("%d'%02d\"", paceMinutes, paceSeconds)
         tvPace.text = finalPaceString
+        tvSaveCalories.text = "${session.caloriesBurned} kcal"
 
         // Time handling (convert millis to Minutes)
         val minutes = (session.durationInMillis / 1000) / 60
@@ -207,7 +263,7 @@ class SaveActivityFragment : Fragment(R.layout.fragment_save_activity) {
                 Toast.makeText(requireContext(), "Activity Saved!", Toast.LENGTH_SHORT).show()
                 sharedViewModel.pendingRunSession.value = null
                 // Kill the GPS Service
-                sendCommandToService("ACTION_STOP_SERVICE")
+                sendCommandToService(com.lionfit.app.services.TrackingService.ACTION_STOP_SERVICE)
                 btnSave.isEnabled = true
                 btnSave.text = "Save Activity"
                 view?.findViewById<EditText>(R.id.etActivityTitle)?.text?.clear()

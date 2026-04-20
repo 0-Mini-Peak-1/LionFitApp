@@ -45,7 +45,12 @@ class TrackingService : Service() {
         const val ACTION_START_OR_RESUME_SERVICE = "ACTION_START_OR_RESUME_SERVICE"
         const val ACTION_PAUSE_SERVICE = "ACTION_PAUSE_SERVICE"
         const val ACTION_STOP_SERVICE = "ACTION_STOP_SERVICE"
+        val cheaterAlert = MutableLiveData<Boolean>()
     }
+
+    private val CHEATER_SPEED_THRESHOLD_MS = 7.0f // 7 meters per second (~25 km/h)
+    private var cheaterStrikeCount = 0
+    private val MAX_STRIKES = 3
 
     private fun postInitialValues() {
         isTracking.postValue(false)
@@ -109,12 +114,29 @@ class TrackingService : Service() {
                 for (location in locations) {
                     // Always update current location
                     currentLocation.postValue(location)
+
                     // If the timer is paused, stop drawing
                     if (isTracking.value != true) {
                         continue
                     }
+
                     // The Drift Bouncer
                     if (location.accuracy > 20f) continue
+                    val currentSpeed = if (location.hasSpeed()) location.speed else 0f
+
+                    // Cheater detection
+                    if (currentSpeed > CHEATER_SPEED_THRESHOLD_MS) {
+                        cheaterStrikeCount++
+
+                        if (cheaterStrikeCount >= MAX_STRIKES) {
+                            handleCheaterDetected()
+                            continue // KILL SWITCH: Stop processing this point entirely
+                        }
+                    } else {
+                        // They slowed down or are running normally. Reset the strikes
+                        cheaterStrikeCount = 0
+                    }
+
                     // Grab the last point recorded
                     val currentSegment = pathPoints.value?.last()
                     val lastPoint = currentSegment?.lastOrNull()
@@ -137,6 +159,17 @@ class TrackingService : Service() {
                 }
             }
         }
+    }
+
+    private fun handleCheaterDetected() {
+        // Pause the timer and stop recording data immediately
+        isTracking.postValue(false)
+
+        // Reset the strike count so it doesn't stay permanently locked
+        cheaterStrikeCount = 0
+
+        // Fire the flare to the RunningFragment
+        cheaterAlert.postValue(true)
     }
 
     private fun addPathPoint(location: android.location.Location?) {

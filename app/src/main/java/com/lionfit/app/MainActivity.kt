@@ -11,11 +11,9 @@ import kotlinx.coroutines.launch
 import com.lionfit.app.data.database.SupabaseManager
 import io.github.jan.supabase.gotrue.auth
 import androidx.appcompat.app.AppCompatDelegate
-import com.lionfit.app.data.model.UserProfile
 import android.widget.ImageView
 import androidx.activity.viewModels
 import coil.load
-import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.lionfit.app.ui.shared.SharedViewModel
@@ -25,8 +23,10 @@ import com.lionfit.app.ui.running.RunningFragment
 import com.lionfit.app.ui.running.SaveActivityFragment
 import com.lionfit.app.ui.history.RunHistoryFragment
 import com.lionfit.app.ui.auth.AuthFragment
+import com.lionfit.app.ui.dashboard.DashboardFragment
 import com.lionfit.app.ui.profile.ProfileFragment
 import com.lionfit.app.ui.diet.DietFragment
+import com.lionfit.app.ui.sleep.SleepFragment
 
 class MainActivity : AppCompatActivity() {
 
@@ -159,7 +159,3 @@ class MainActivity : AppCompatActivity() {
        transaction.commit()
    }
 }
-
-// --- PLACEHOLDER FRAGMENTS ---
-class DashboardFragment : Fragment(R.layout.fragment_placeholder)
-class SleepFragment : Fragment(R.layout.fragment_placeholder)

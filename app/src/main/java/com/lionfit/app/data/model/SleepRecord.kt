@@ -2,14 +2,29 @@ package com.lionfit.app.data.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import java.util.UUID
 
-@Entity(tableName = "sleep_records_table")
+@Serializable
+@Entity(tableName = "sleep_records")
 data class SleepRecord(
-    @PrimaryKey(autoGenerate = true)
-    val id: Int = 0,
-    val dateLogged: Long,         // The day the record belongs to
-    val bedTimeInMillis: Long,    // When they went to sleep
-    val wakeTimeInMillis: Long,   // When they woke up
-    val totalHoursSlept: Double,  // Calculated from bed/wake times
-    val notes: String? = null     // Optional field for how they felt
+    @PrimaryKey
+    @SerialName("id")
+    val id: String = UUID.randomUUID().toString(),
+
+    @SerialName("user_id")
+    val userId: String,
+
+    @SerialName("date_logged")
+    val dateLogged: Long,
+
+    @SerialName("bed_time_in_millis")
+    val bedTimeInMillis: Long,
+
+    @SerialName("wake_time_in_millis")
+    val wakeTimeInMillis: Long,
+
+    @SerialName("total_hours_slept")
+    val totalHoursSlept: Double
 )

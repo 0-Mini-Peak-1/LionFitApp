@@ -40,6 +40,10 @@ import io.github.jan.supabase.gotrue.auth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.random.Random
+import android.app.Dialog
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
+import android.view.Window
 
 class RunningFragment : Fragment(R.layout.fragment_running) {
     private lateinit var runDao: RunDao
@@ -169,6 +173,7 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
         Configuration.getInstance().userAgentValue = requireContext().packageName
         map = view.findViewById(R.id.map)
         map.setTileSource(TileSourceFactory.MAPNIK)
+        map.setBuiltInZoomControls(false)
         map.setMultiTouchControls(true)
 
         // Initialize MapTrackingManager
@@ -304,7 +309,7 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
             title = "",
             description = "",
             activityType = "Run",
-            mapSnapshotUrl = null // Starts null, your SaveActivity will fill it!
+            mapSnapshotUrl = null // Starts null, SaveActivity will fill it
         )
 
         // 4. Inject it into the memory box and jump to the Save screen
@@ -332,22 +337,6 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
     override fun onHiddenChanged(hidden: Boolean) {
         super.onHiddenChanged(hidden)
         manageGpsBattery(isHidden = hidden)
-
-        if (!hidden) {
-            // Check if there is an active run that is currently paused
-            val isCurrentlyPaused = TrackingService.isTracking.value == false
-            val hasRunTime = (TrackingService.timeRunInMillis.value ?: 0L) > 0L
-
-            if (isCurrentlyPaused && hasRunTime) {
-                // Unfreeze the clock
-                val resumeIntent = Intent(requireContext(), TrackingService::class.java).apply {
-                    action = TrackingService.ACTION_START_OR_RESUME_SERVICE
-                }
-                requireContext().startService(resumeIntent)
-
-                Toast.makeText(requireContext(), "Run Resumed!", Toast.LENGTH_SHORT).show()
-            }
-        }
     }
 
     private fun toggleScreenLock() {
@@ -462,7 +451,6 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
 
         val fabHistory = view?.findViewById<FloatingActionButton>(R.id.fabHistory)
         fabHistory?.setOnClickListener {
-            // Shout to MainActivity to change the screen!
             (requireActivity() as MainActivity).switchFragment("run_history")
         }
 
@@ -477,16 +465,33 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
     }
 
     private fun showStopConfirmationDialog() {
-        AlertDialog.Builder(requireContext())
-            .setTitle("Do you want to stop tracking?")
-            .setPositiveButton("Confirm") { _, _ ->
-                simulateFakeRun()
-            }
-            .setNegativeButton("Cancel") { dialogInterface, _ ->
-                dialogInterface.dismiss()
-            }
-            .create()
-            .show()
+        // Create the dialog and attach the custom XML
+        val dialog = Dialog(requireContext())
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_stop_running)
+        // Make the default window background transparent
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        // Make the dialog width match the screen properly
+        dialog.window?.setLayout(
+            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+
+        // Find the buttons inside the custom layout
+        val btnConfirm = dialog.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnConfirmStop)
+        val btnCancel = dialog.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancelStop)
+
+        // Set up the click actions
+        btnConfirm.setOnClickListener {
+            dialog.dismiss()
+            endRunAndNavigateToSave()
+        }
+
+        btnCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.show()
     }
 
     private fun updateButtonVisibility(isTrackingActive: Boolean) {
@@ -617,6 +622,24 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
                 tvSpeedExpanded.text = "--'--\""
             }
         }
+
+        // Listen for the Cheater Alert
+        com.lionfit.app.services.TrackingService.cheaterAlert.observe(viewLifecycleOwner) { isCheater ->
+            if (isCheater) {
+                // Show the user they got busted
+                androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                    .setTitle("Whoa there, Flash! ⚡")
+                    .setMessage("We detected speeds faster than humanly possible. Are you on a scooter? Your run has been paused to keep the fair game\uD83D\uDDFF.")
+                    .setPositiveButton("Got it") { dialog, _ ->
+                        dialog.dismiss()
+                    }
+                    .setCancelable(false) // Forces them to click the button to dismiss
+                    .show()
+
+                // IMPORTANT: Reset the alert back to false so it doesn't pop up again if they rotate their screen
+                com.lionfit.app.services.TrackingService.cheaterAlert.postValue(false)
+            }
+        }
     }
 
     override fun onResume() {
@@ -642,10 +665,10 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
         }
 
         if (isHidden) {
-            // User switched to Account Tab or locked phone. Kill the preview to save battery!
+            // User switched to Account Tab or locked phone. Kill the preview to save battery
             stopGpsPreview()
         } else {
-            // User is looking at the map waiting to run. Wake up the GPS!
+            // User is looking at the map waiting to run. Wake up the GPS
             startGpsPreview()
         }
     }

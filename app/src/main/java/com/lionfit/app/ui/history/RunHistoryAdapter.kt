@@ -12,6 +12,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import coil.load
+import com.lionfit.app.utils.setSafeOnClickListener
 
 class RunHistoryAdapter(
     private var runs: List<RunSession>,
@@ -73,7 +74,7 @@ class RunHistoryAdapter(
         }
 
         // Click Listener
-        holder.itemView.setOnClickListener {
+        holder.itemView.setSafeOnClickListener {
             onRunClicked(run)
         }
     }
