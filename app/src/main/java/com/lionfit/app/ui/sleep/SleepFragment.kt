@@ -192,13 +192,13 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
 
     private fun showDeleteConfirmation(record: SleepRecord, onDeleted: () -> Unit) {
         AlertDialog.Builder(requireContext())
-            .setTitle("ลบข้อมูล")
-            .setMessage("คุณต้องการลบเวลานี้ใช่หรือไม่")
-            .setPositiveButton("ลบ") { _, _ ->
+            .setTitle("DELETE DATA")
+            .setMessage("Do you want to delete this time?")
+            .setPositiveButton("DELETE") { _, _ ->
                 deleteRecord(record)
                 onDeleted()
             }
-            .setNegativeButton("ยกเลิก", null)
+            .setNegativeButton("Cancel", null)
             .show()
     }
 
@@ -212,12 +212,12 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
                 SupabaseManager.deleteSleepRecord(record.id)
 
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(requireContext(), "ลบข้อมูลเรียบร้อยแล้ว", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Data deleted successfully.", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(requireContext(), "เกิดข้อผิดพลาดในการลบข้อมูล", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "An error occurred while deleting the data.", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -249,10 +249,10 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
         }
         if (overlapping.isNotEmpty()) {
             AlertDialog.Builder(requireContext())
-                .setTitle("แจ้งเตือน")
-                .setMessage("คุณได้เลือกเวลาดังกล่าวแล้ว ต้องการบันทึกต่อหรือไม่")
-                .setPositiveButton("ตกลง") { _, _ -> saveRecord(newRecord, overlapping) }
-                .setNegativeButton("ยกเลิก", null)
+                .setTitle("Notice")
+                .setMessage("You have selected this time. Do you want to continue saving?")
+                .setPositiveButton("OK") { _, _ -> saveRecord(newRecord, overlapping) }
+                .setNegativeButton("Cancel", null)
                 .show()
         } else {
             saveRecord(newRecord, emptyList())
@@ -269,7 +269,7 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
                 db.sleepDao().insertSleepRecord(newRecord)
                 SupabaseManager.saveSleepRecord(newRecord)
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(requireContext(), "บันทึกข้อมูลเรียบร้อย", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Saved successfully.", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) { e.printStackTrace() }
         }
@@ -418,7 +418,7 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
                     val hours = record.totalHoursSlept.toInt()
                     val minutes = ((record.totalHoursSlept - hours) * 60).toInt()
                     Text(
-                        text = "เวลานอนรวม: $hours ชม. $minutes นาที",
+                        text = "Total sleep time.: $hours hr. $minutes min",
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp
                     )
@@ -441,14 +441,14 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
                         onDismissRequest = { showMenu = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("ลบรายการนี้", color = ComposeColor.Red) },
+                            text = { Text("Delete this Time", color = ComposeColor.Red) },
                             onClick = {
                                 showMenu = false
                                 onDelete()
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("ปิด") },
+                            text = { Text("close") },
                             onClick = { 
                                 showMenu = false
                                 onDismiss()
