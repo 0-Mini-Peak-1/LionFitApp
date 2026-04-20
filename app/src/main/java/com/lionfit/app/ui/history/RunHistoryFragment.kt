@@ -184,7 +184,7 @@ class RunHistoryFragment : Fragment(R.layout.fragment_run_history) {
     private fun showDeleteConfirmationDialog(runSession: RunSession) {
         android.app.AlertDialog.Builder(requireContext())
             .setTitle("Delete Activity?")
-            .setMessage("Are you sure you want to delete '${runSession.title}'? This cannot be undone.")
+            .setMessage("Are you sure you want to delete '${runSession.title}'? This action cannot be undone.")
             .setPositiveButton("Delete") { _, _ ->
                 // User confirmed
                 executeDeleteRun(runSession)

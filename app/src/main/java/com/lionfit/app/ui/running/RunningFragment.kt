@@ -332,22 +332,6 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
     override fun onHiddenChanged(hidden: Boolean) {
         super.onHiddenChanged(hidden)
         manageGpsBattery(isHidden = hidden)
-
-        if (!hidden) {
-            // Check if there is an active run that is currently paused
-            val isCurrentlyPaused = TrackingService.isTracking.value == false
-            val hasRunTime = (TrackingService.timeRunInMillis.value ?: 0L) > 0L
-
-            if (isCurrentlyPaused && hasRunTime) {
-                // Unfreeze the clock
-                val resumeIntent = Intent(requireContext(), TrackingService::class.java).apply {
-                    action = TrackingService.ACTION_START_OR_RESUME_SERVICE
-                }
-                requireContext().startService(resumeIntent)
-
-                Toast.makeText(requireContext(), "Run Resumed!", Toast.LENGTH_SHORT).show()
-            }
-        }
     }
 
     private fun toggleScreenLock() {
