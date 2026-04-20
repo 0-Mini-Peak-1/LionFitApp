@@ -24,6 +24,7 @@ import com.lionfit.app.ui.running.RunningFragment
 import com.lionfit.app.ui.running.SaveActivityFragment
 import com.lionfit.app.ui.history.RunHistoryFragment
 import com.lionfit.app.ui.auth.AuthFragment
+import com.lionfit.app.ui.dashboard.DashboardFragment
 import com.lionfit.app.ui.profile.ProfileFragment
 import com.lionfit.app.ui.diet.DietFragment
 

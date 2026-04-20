@@ -103,7 +103,6 @@ class DashboardFragment : Fragment() {
     /**
      * ดึงข้อมูลกิจกรรมการวิ่งล่าสุดมาแสดงผลบนหน้าจอ
      */
-
     private fun observeRunData(view: View) {
         val ivMap = view.findViewById<ImageView>(R.id.ivLastRouteMap)
         val tvTitle = view.findViewById<TextView>(R.id.tvRunTitle)
@@ -140,6 +139,7 @@ class DashboardFragment : Fragment() {
                             val durationMin = lastRun.durationInMillis / 60000
                             tvTime.text = String.format(Locale.getDefault(), "%d Min", durationMin)
 
+                            // Load the map screenshot using Coil
                             if (lastRun.mapSnapshotUrl != null) {
                                 ivMap.load(lastRun.mapSnapshotUrl) {
                                     placeholder(android.R.drawable.ic_dialog_map)
