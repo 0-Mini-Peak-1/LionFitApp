@@ -90,9 +90,11 @@ class AddFoodFragment : Fragment(R.layout.fragment_add_food) {
             }
         }
 
-        // Done button — Save all and go back
-        view.findViewById<View>(R.id.btnDone).setOnClickListener {
+        view.findViewById<View>(R.id.btnDoneTop).setOnClickListener {
             saveAllSelectedFood()
+        }
+        view.findViewById<View>(R.id.btnBack).setOnClickListener {
+            parentFragmentManager.popBackStack()
         }
     }
 

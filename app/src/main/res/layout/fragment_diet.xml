@@ -1,501 +1,512 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#F5F5F5"
-    android:fillViewport="true">
+    android:layout_height="match_parent">
 
-    <LinearLayout
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:layout_height="match_parent"
+        android:background="#F5F5F5"
+        android:fillViewport="true">
 
-        <!-- Yellow Header Bar with Date Selection -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            android:background="#FFC107"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:paddingHorizontal="16dp">
-
-            <TextView
-                android:id="@+id/tvSelectedDate"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:text="Today"
-                android:textColor="#212121"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                app:drawableEndCompat="@drawable/ic_calendar"
-                android:drawablePadding="8dp"
-                android:paddingStart="24dp"
-                android:paddingEnd="24dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:background="?attr/selectableItemBackground" />
-
-        </LinearLayout>
-
-        <!-- Calorie Summary Section -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:paddingTop="16dp"
-            android:paddingBottom="8dp"
-            android:background="#F5F5F5">
+            android:orientation="vertical">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/calorie_for_today"
-                android:textColor="#212121"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="16dp" />
-
-            <!-- Three Circles Row -->
+            <!-- Yellow Header Bar with Date Selection -->
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="?attr/actionBarSize"
+                android:background="#FFC107"
                 android:orientation="horizontal"
-                android:gravity="center"
-                android:baselineAligned="false"
-                android:layout_marginBottom="8dp">
+                android:gravity="center_vertical"
+                android:paddingHorizontal="16dp">
 
-                <!-- Eaten Circle -->
-                <FrameLayout
-                    android:layout_width="0dp"
-                    android:layout_height="90dp"
-                    android:layout_weight="1"
-                    android:gravity="center">
-
-                    <com.google.android.material.progressindicator.CircularProgressIndicator
-                        android:id="@+id/progressEaten"
-                        android:layout_width="90dp"
-                        android:layout_height="90dp"
-                        android:layout_gravity="center"
-                        android:max="2000"
-                        android:progress="0"
-                        app:indicatorColor="#8BC34A"
-                        app:trackColor="#E0E0E0"
-                        app:trackThickness="6dp"
-                        app:indicatorSize="90dp" />
-
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center"
-                        android:gravity="center"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:id="@+id/tvEaten"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/value_zero"
-                            android:textColor="#212121"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/label_eaten"
-                            android:textColor="#757575"
-                            android:textSize="11sp" />
-
-                    </LinearLayout>
-
-                </FrameLayout>
-
-                <!-- kcal left Circle (larger, center) -->
-                <FrameLayout
-                    android:layout_width="0dp"
-                    android:layout_height="110dp"
-                    android:layout_weight="1"
-                    android:gravity="center">
-
-                    <com.google.android.material.progressindicator.CircularProgressIndicator
-                        android:id="@+id/progressKcalLeft"
-                        android:layout_width="110dp"
-                        android:layout_height="110dp"
-                        android:layout_gravity="center"
-                        android:max="2000"
-                        android:progress="2000"
-                        app:indicatorColor="#CDDC39"
-                        app:trackColor="#E0E0E0"
-                        app:trackThickness="7dp"
-                        app:indicatorSize="110dp" />
-
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center"
-                        android:gravity="center"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:id="@+id/tvKcalLeft"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/default_kcal"
-                            android:textColor="#212121"
-                            android:textSize="18sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/label_kcal_left"
-                            android:textColor="#757575"
-                            android:textSize="11sp" />
-
-                    </LinearLayout>
-
-                </FrameLayout>
-
-                <!-- Goal Circle -->
-                <FrameLayout
-                    android:layout_width="0dp"
-                    android:layout_height="90dp"
-                    android:layout_weight="1"
-                    android:gravity="center">
-
-                    <com.google.android.material.progressindicator.CircularProgressIndicator
-                        android:id="@+id/progressGoal"
-                        android:layout_width="90dp"
-                        android:layout_height="90dp"
-                        android:layout_gravity="center"
-                        android:max="2000"
-                        android:progress="2000"
-                        app:indicatorColor="#FFC107"
-                        app:trackColor="#E0E0E0"
-                        app:trackThickness="6dp"
-                        app:indicatorSize="90dp" />
-
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center"
-                        android:gravity="center"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:id="@+id/tvGoal"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/default_kcal"
-                            android:textColor="#212121"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/label_goal"
-                            android:textColor="#757575"
-                            android:textSize="11sp" />
-
-                    </LinearLayout>
-
-                </FrameLayout>
-
-            </LinearLayout>
-
-        </LinearLayout>
-
-        <!-- Water Card -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cardWater"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="16dp"
-            android:layout_marginTop="12dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="2dp"
-            app:strokeWidth="0dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="16dp"
-                android:gravity="center_vertical">
-
-                <ImageView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:layout_marginEnd="12dp"
-                    android:contentDescription="@string/cd_water"
-                    android:src="@drawable/ic_water_drop" />
-
-                <LinearLayout
+                <TextView
+                    android:id="@+id/tvSelectedDate"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="Today"
+                    android:textColor="#212121"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    app:drawableEndCompat="@drawable/ic_calendar"
+                    android:drawablePadding="8dp"
+                    android:paddingStart="24dp"
+                    android:paddingEnd="24dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?attr/selectableItemBackground" />
+
+            </LinearLayout>
+
+            <!-- Calorie Summary Section -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="16dp"
+                android:paddingBottom="8dp"
+                android:background="#F5F5F5">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/calorie_for_today"
+                    android:textColor="#212121"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="16dp" />
+
+                <!-- Three Circles Row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:baselineAligned="false"
+                    android:layout_marginBottom="8dp">
+
+                    <!-- Eaten Circle -->
+                    <FrameLayout
+                        android:layout_width="0dp"
+                        android:layout_height="90dp"
+                        android:layout_weight="1"
+                        android:gravity="center">
+
+                        <com.google.android.material.progressindicator.CircularProgressIndicator
+                            android:id="@+id/progressEaten"
+                            android:layout_width="90dp"
+                            android:layout_height="90dp"
+                            android:layout_gravity="center"
+                            android:max="2000"
+                            android:progress="0"
+                            app:indicatorColor="#8BC34A"
+                            app:trackColor="#E0E0E0"
+                            app:trackThickness="6dp"
+                            app:indicatorSize="90dp" />
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:gravity="center"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/tvEaten"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/value_zero"
+                                android:textColor="#212121"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/label_eaten"
+                                android:textColor="#757575"
+                                android:textSize="11sp" />
+
+                        </LinearLayout>
+
+                    </FrameLayout>
+
+                    <!-- kcal left Circle (larger, center) -->
+                    <FrameLayout
+                        android:layout_width="0dp"
+                        android:layout_height="110dp"
+                        android:layout_weight="1"
+                        android:gravity="center">
+
+                        <com.google.android.material.progressindicator.CircularProgressIndicator
+                            android:id="@+id/progressKcalLeft"
+                            android:layout_width="110dp"
+                            android:layout_height="110dp"
+                            android:layout_gravity="center"
+                            android:max="2000"
+                            android:progress="2000"
+                            app:indicatorColor="#CDDC39"
+                            app:trackColor="#E0E0E0"
+                            app:trackThickness="7dp"
+                            app:indicatorSize="110dp" />
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:gravity="center"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/tvKcalLeft"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/default_kcal"
+                                android:textColor="#212121"
+                                android:textSize="18sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/label_kcal_left"
+                                android:textColor="#757575"
+                                android:textSize="11sp" />
+
+                        </LinearLayout>
+
+                    </FrameLayout>
+
+                    <!-- Goal Circle -->
+                    <FrameLayout
+                        android:layout_width="0dp"
+                        android:layout_height="90dp"
+                        android:layout_weight="1"
+                        android:gravity="center">
+
+                        <com.google.android.material.progressindicator.CircularProgressIndicator
+                            android:id="@+id/progressGoal"
+                            android:layout_width="90dp"
+                            android:layout_height="90dp"
+                            android:layout_gravity="center"
+                            android:max="2000"
+                            android:progress="2000"
+                            app:indicatorColor="#FFC107"
+                            app:trackColor="#E0E0E0"
+                            app:trackThickness="6dp"
+                            app:indicatorSize="90dp" />
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:gravity="center"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/tvGoal"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/default_kcal"
+                                android:textColor="#212121"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/label_goal"
+                                android:textColor="#757575"
+                                android:textSize="11sp" />
+
+                        </LinearLayout>
+
+                    </FrameLayout>
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- Water Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardWater"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginTop="12dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:strokeWidth="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="16dp"
+                    android:gravity="center_vertical">
+
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_marginEnd="12dp"
+                        android:contentDescription="@string/cd_water"
+                        android:src="@drawable/ic_water_drop" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/label_water"
+                            android:textColor="#212121"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvWaterAmount"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/default_water"
+                            android:textColor="#757575"
+                            android:textSize="13sp" />
+
+                    </LinearLayout>
+
+                    <Button
+                        android:id="@+id/btnAddWater"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:text="@string/btn_add"
+                        android:textColor="#212121"
+                        app:strokeColor="#E0E0E0"
+                        app:cornerRadius="8dp" />
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Breakfast Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardBreakfast"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginTop="8dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:strokeWidth="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
                     android:orientation="vertical">
 
-                    <TextView
-                        android:layout_width="wrap_content"
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/label_water"
-                        android:textColor="#212121"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
+                        android:orientation="horizontal"
+                        android:padding="16dp"
+                        android:gravity="center_vertical">
 
-                    <TextView
-                        android:id="@+id/tvWaterAmount"
-                        android:layout_width="wrap_content"
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/label_breakfast"
+                            android:textColor="#212121"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <Button
+                            android:id="@+id/btnAddBreakfast"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:text="@string/btn_add"
+                            android:textColor="#212121"
+                            app:strokeColor="#E0E0E0"
+                            app:cornerRadius="8dp" />
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/llBreakfastItems"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/default_water"
-                        android:textColor="#757575"
-                        android:textSize="13sp" />
+                        android:orientation="vertical"
+                        android:paddingBottom="8dp" />
 
                 </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
-                <Button
-                    android:id="@+id/btnAddWater"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="36dp"
-                    android:text="@string/btn_add"
-                    android:textColor="#212121"
-                    app:strokeColor="#E0E0E0"
-                    app:cornerRadius="8dp" />
-
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- Breakfast Card -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cardBreakfast"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="16dp"
-            android:layout_marginTop="8dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="2dp"
-            app:strokeWidth="0dp">
-
-            <LinearLayout
+            <!-- Lunch Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardLunch"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginTop="8dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:padding="16dp"
-                    android:gravity="center_vertical">
+                    android:orientation="vertical">
 
-                    <TextView
-                        android:layout_width="0dp"
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/label_breakfast"
-                        android:textColor="#212121"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
+                        android:orientation="horizontal"
+                        android:padding="16dp"
+                        android:gravity="center_vertical">
 
-                    <Button
-                        android:id="@+id/btnAddBreakfast"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="36dp"
-                        android:text="@string/btn_add"
-                        android:textColor="#212121"
-                        app:strokeColor="#E0E0E0"
-                        app:cornerRadius="8dp" />
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/label_lunch"
+                            android:textColor="#212121"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <Button
+                            android:id="@+id/btnAddLunch"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:text="@string/btn_add"
+                            android:textColor="#212121"
+                            app:strokeColor="#E0E0E0"
+                            app:cornerRadius="8dp" />
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/llLunchItems"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingBottom="8dp" />
 
                 </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
-                <LinearLayout
-                    android:id="@+id/llBreakfastItems"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:paddingBottom="8dp" />
-
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- Lunch Card -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cardLunch"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="16dp"
-            android:layout_marginTop="8dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="2dp"
-            app:strokeWidth="0dp">
-
-            <LinearLayout
+            <!-- Dinner Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardDinner"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginTop="8dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:padding="16dp"
-                    android:gravity="center_vertical">
+                    android:orientation="vertical">
 
-                    <TextView
-                        android:layout_width="0dp"
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/label_lunch"
-                        android:textColor="#212121"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
+                        android:orientation="horizontal"
+                        android:padding="16dp"
+                        android:gravity="center_vertical">
 
-                    <Button
-                        android:id="@+id/btnAddLunch"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="36dp"
-                        android:text="@string/btn_add"
-                        android:textColor="#212121"
-                        app:strokeColor="#E0E0E0"
-                        app:cornerRadius="8dp" />
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/label_dinner"
+                            android:textColor="#212121"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <Button
+                            android:id="@+id/btnAddDinner"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:text="@string/btn_add"
+                            android:textColor="#212121"
+                            app:strokeColor="#E0E0E0"
+                            app:cornerRadius="8dp" />
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/llDinnerItems"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingBottom="8dp" />
 
                 </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
-                <LinearLayout
-                    android:id="@+id/llLunchItems"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:paddingBottom="8dp" />
-
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- Dinner Card -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cardDinner"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="16dp"
-            android:layout_marginTop="8dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="2dp"
-            app:strokeWidth="0dp">
-
-            <LinearLayout
+            <!-- Snack Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardSnack"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="24dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:padding="16dp"
-                    android:gravity="center_vertical">
+                    android:orientation="vertical">
 
-                    <TextView
-                        android:layout_width="0dp"
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/label_dinner"
-                        android:textColor="#212121"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
+                        android:orientation="horizontal"
+                        android:padding="16dp"
+                        android:gravity="center_vertical">
 
-                    <Button
-                        android:id="@+id/btnAddDinner"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="36dp"
-                        android:text="@string/btn_add"
-                        android:textColor="#212121"
-                        app:strokeColor="#E0E0E0"
-                        app:cornerRadius="8dp" />
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/label_snack"
+                            android:textColor="#212121"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <Button
+                            android:id="@+id/btnAddSnack"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:text="@string/btn_add"
+                            android:textColor="#212121"
+                            app:strokeColor="#E0E0E0"
+                            app:cornerRadius="8dp" />
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/llSnackItems"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingBottom="8dp" />
 
                 </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
-                <LinearLayout
-                    android:id="@+id/llDinnerItems"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:paddingBottom="8dp" />
+        </LinearLayout>
 
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+    </androidx.core.widget.NestedScrollView>
 
-        <!-- Snack Card -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cardSnack"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="16dp"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="24dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="2dp"
-            app:strokeWidth="0dp">
+    <!-- Sub Container for AddFoodFragment -->
+    <FrameLayout
+        android:id="@+id/diet_sub_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:padding="16dp"
-                    android:gravity="center_vertical">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/label_snack"
-                        android:textColor="#212121"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
-
-                    <Button
-                        android:id="@+id/btnAddSnack"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="36dp"
-                        android:text="@string/btn_add"
-                        android:textColor="#212121"
-                        app:strokeColor="#E0E0E0"
-                        app:cornerRadius="8dp" />
-
-                </LinearLayout>
-
-                <LinearLayout
-                    android:id="@+id/llSnackItems"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:paddingBottom="8dp" />
-
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-    </LinearLayout>
-
-</androidx.core.widget.NestedScrollView>
+</FrameLayout>
