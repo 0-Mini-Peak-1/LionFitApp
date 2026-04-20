@@ -31,7 +31,32 @@ class DietFragment : Fragment(R.layout.fragment_diet) {
     private var currentWaterMl = 0
 
     private var selectedDate = java.util.Calendar.getInstance()
+    private var isDateExplicitlySelected = false
     private var availableDates = setOf<String>()
+
+    override fun onResume() {
+        super.onResume()
+        refreshDateIfNecessary()
+    }
+
+    override fun onHiddenChanged(hidden: Boolean) {
+        super.onHiddenChanged(hidden)
+        if (!hidden) {
+            refreshDateIfNecessary()
+        }
+    }
+
+    private fun refreshDateIfNecessary() {
+        val now = java.util.Calendar.getInstance()
+        // ถ้าไม่ได้เลือกวันที่เอง และ วันที่ในตัวแปรไม่ใช่ "วันนี้" จริงๆ ให้รีเฟรช
+        if (!isDateExplicitlySelected && !isSameDay(selectedDate, now)) {
+            selectedDate = now
+            view?.let { 
+                updateDateDisplay(it)
+                observeDietData(it)
+            }
+        }
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -66,8 +91,15 @@ class DietFragment : Fragment(R.layout.fragment_diet) {
         )
         mealButtons.forEach { (btnId, mealType) ->
             view.findViewById<View>(btnId).setOnClickListener {
-                parentFragmentManager.beginTransaction()
-                    .replace(R.id.fragment_container, AddFoodFragment.newInstance(mealType, selectedDate.timeInMillis))
+                // แปลง selectedDate เป็น UTC Midnight ก่อนส่งไป AddFoodFragment
+                val utcCal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
+                utcCal.clear()
+                utcCal.set(selectedDate.get(java.util.Calendar.YEAR), 
+                           selectedDate.get(java.util.Calendar.MONTH), 
+                           selectedDate.get(java.util.Calendar.DAY_OF_MONTH))
+                
+                childFragmentManager.beginTransaction()
+                    .replace(R.id.diet_sub_container, AddFoodFragment.newInstance(mealType, utcCal.timeInMillis))
                     .addToBackStack(null)
                     .commit()
             }
@@ -95,9 +127,16 @@ class DietFragment : Fragment(R.layout.fragment_diet) {
         val constraintsBuilder = CalendarConstraints.Builder()
             .setValidator(DateValidatorPointBackward.now())
 
+        // สร้าง Calendar สำหรับ UTC เพื่อให้ MaterialDatePicker เลือกวันได้ถูกต้อง
+        val utcSelection = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
+        utcSelection.clear()
+        utcSelection.set(selectedDate.get(java.util.Calendar.YEAR), 
+                         selectedDate.get(java.util.Calendar.MONTH), 
+                         selectedDate.get(java.util.Calendar.DAY_OF_MONTH))
+
         val datePicker = MaterialDatePicker.Builder.datePicker()
             .setTitleText("Select Date")
-            .setSelection(selectedDate.timeInMillis)
+            .setSelection(utcSelection.timeInMillis)
             .setCalendarConstraints(constraintsBuilder.build())
             .setDayViewDecorator(object : DayViewDecorator() {
                 override fun getTextColor(
@@ -133,16 +172,18 @@ class DietFragment : Fragment(R.layout.fragment_diet) {
             .build()
 
         datePicker.addOnPositiveButtonClickListener { selection ->
-            // MaterialDatePicker คืนค่าเป็น UTC millis
+            // MaterialDatePicker คืนค่าเป็น UTC millis (Midnight ของวันนั้นใน UTC)
             val utcCal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
             utcCal.timeInMillis = selection
             
+            // ตั้งค่า selectedDate (Local) ให้ตรงกับวันที่ที่เลือกจาก UTC
             selectedDate.set(
                 utcCal.get(java.util.Calendar.YEAR),
                 utcCal.get(java.util.Calendar.MONTH),
                 utcCal.get(java.util.Calendar.DAY_OF_MONTH)
             )
             
+            isDateExplicitlySelected = true
             updateDateDisplay(view)
             observeDietData(view)
         }
