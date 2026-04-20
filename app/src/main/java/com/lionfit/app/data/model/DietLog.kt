@@ -27,6 +27,18 @@ data class DietLog(
     @ColumnInfo(name = "calories")
     val calories: Int,
 
+    @SerialName("protein")
+    @ColumnInfo(name = "protein")
+    val protein: Int = 0,
+
+    @SerialName("fat")
+    @ColumnInfo(name = "fat")
+    val fat: Int = 0,
+
+    @SerialName("carb")
+    @ColumnInfo(name = "carb")
+    val carb: Int = 0,
+
     @SerialName("date_logged")
     @ColumnInfo(name = "date_logged")
     val dateLogged: Long,

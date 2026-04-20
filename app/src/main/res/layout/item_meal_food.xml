@@ -9,14 +9,28 @@
     android:paddingBottom="4dp"
     android:gravity="center_vertical">
 
-    <TextView
-        android:id="@+id/tvMealFoodName"
+    <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:text="@string/placeholder_food_result_name"
-        android:textColor="#424242"
-        android:textSize="14sp" />
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvMealFoodName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/placeholder_food_result_name"
+            android:textColor="#424242"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/tvMealFoodMacros"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="P: 0g | F: 0g | C: 0g"
+            android:textColor="#9E9E9E"
+            android:textSize="11sp" />
+    </LinearLayout>
 
     <TextView
         android:id="@+id/tvMealFoodCal"
@@ -24,6 +38,16 @@
         android:layout_height="wrap_content"
         android:text="@string/placeholder_cal"
         android:textColor="#757575"
-        android:textSize="13sp" />
+        android:textSize="13sp"
+        android:layout_marginEnd="8dp"/>
+
+    <ImageButton
+        android:id="@+id/btnDeleteMealItem"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:src="@android:drawable/ic_menu_delete"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:tint="#EF5350"
+        android:contentDescription="Delete item" />
 
 </LinearLayout>

@@ -148,6 +148,112 @@ object SupabaseManager {
         }
     }
 
+    // ลบข้อมูล DietLog จาก Cloud
+    suspend fun deleteDietLogFromCloud(logId: String): Boolean {
+        return try {
+            client.postgrest["diet_logs"].delete {
+                filter { eq("id", logId) }
+            }
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    // Sync Water to Cloud
+    suspend fun syncWaterToCloud(waterLog: com.lionfit.app.data.model.WaterLog): Boolean {
+        val currentUser = client.auth.currentUserOrNull() ?: return false
+        return withContext(Dispatchers.IO) {
+            try {
+                // ต้องมั่นใจว่า userId เป็น UUID ของผู้ใช้จริง
+                val logWithUser = waterLog.copy(userId = currentUser.id)
+                client.postgrest.from("water_logs").insert(logWithUser)
+                true
+            } catch (e: Exception) {
+                android.util.Log.e("SupabaseSync", "Water Sync Failed: ${e.message}")
+                false
+            }
+        }
+    }
+
+    // บันทึกเมนูอาหารใหม่ลงตาราง foods
+    // ดึงรายการวันที่ทั้งหมดที่มีข้อมูลจาก Cloud
+    suspend fun getLoggedDates(): Set<Long> {
+        val currentUser = client.auth.currentUserOrNull() ?: return emptySet()
+        return withContext(Dispatchers.IO) {
+            try {
+                val dietDates = client.postgrest.from("diet_logs")
+                    .select { filter { eq("user_id", currentUser.id) } }
+                    .decodeList<DietLog>()
+                    .map { (it.dateLogged / 86400000) * 86400000 }
+
+                val waterDates = client.postgrest.from("water_logs")
+                    .select { filter { eq("user_id", currentUser.id) } }
+                    .decodeList<com.lionfit.app.data.model.WaterLog>()
+                    .map { (it.dateLogged / 86400000) * 86400000 }
+
+                (dietDates + waterDates).toSet()
+            } catch (e: Exception) {
+                android.util.Log.e("SupabaseSync", "Failed to fetch dates: ${e.message}")
+                emptySet()
+            }
+        }
+    }
+
+    // ดึงข้อมูล DietLog ของวันที่กำหนดจาก Cloud
+    suspend fun getDietLogsFromCloud(start: Long, end: Long): List<DietLog> {
+        val currentUser = client.auth.currentUserOrNull() ?: return emptyList()
+        return try {
+            client.postgrest.from("diet_logs").select {
+                filter {
+                    eq("user_id", currentUser.id)
+                    gte("date_logged", start)
+                    lte("date_logged", end)
+                }
+            }.decodeList<DietLog>()
+        } catch (e: Exception) { emptyList() }
+    }
+
+    // ดึงรายการอาหารทั้งหมดจากตาราง foods
+    suspend fun getAllFoods(): List<com.lionfit.app.data.model.FoodItem> {
+        return try {
+            client.postgrest.from("foods").select().decodeList<com.lionfit.app.data.model.FoodItem>()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    // บันทึกเมนูอาหารใหม่ลงตาราง foods
+    suspend fun addNewFood(food: com.lionfit.app.data.model.FoodItem): Boolean {
+        return try {
+            client.postgrest.from("foods").insert(food)
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    // ดึงข้อมูล WaterLog ของวันที่กำหนดจาก Cloud
+    suspend fun getWaterLogsFromCloud(start: Long, end: Long): List<com.lionfit.app.data.model.WaterLog> {
+        val currentUser = client.auth.currentUserOrNull() ?: return emptyList()
+        return try {
+            client.postgrest.from("water_logs").select {
+                filter {
+                    eq("user_id", currentUser.id)
+                    gte("date_logged", start)
+                    lte("date_logged", end)
+                }
+            }.decodeList<com.lionfit.app.data.model.WaterLog>()
+        } catch (e: Exception) {
+            android.util.Log.e("SupabaseSync", "Failed to fetch water logs: ${e.message}")
+            emptyList()
+        }
+    }
+
+    // Sync Sleep to Cloud
     // --- SLEEP SYNC FUNCTIONS ---
 
     suspend fun saveSleepRecord(sleepRecord: SleepRecord): Boolean {

@@ -41,6 +41,18 @@
             app:layout_constraintTop_toBottomOf="@id/tvFoodResultName" />
 
         <TextView
+            android:id="@+id/tvMacros"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="P: 0g | F: 0g | C: 0g"
+            android:textSize="11sp"
+            android:textColor="#757575"
+            app:layout_constraintBottom_toBottomOf="@id/chipResultCal"
+            app:layout_constraintStart_toEndOf="@id/chipResultCal"
+            app:layout_constraintTop_toTopOf="@id/chipResultCal" />
+
+        <TextView
             android:id="@+id/tvServing"
             android:layout_width="0dp"
             android:layout_height="wrap_content"

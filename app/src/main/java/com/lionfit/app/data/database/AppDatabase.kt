@@ -8,11 +8,12 @@ import androidx.room.TypeConverters
 import com.lionfit.app.data.model.DietLog
 import com.lionfit.app.data.model.RunSession
 import com.lionfit.app.data.model.SleepRecord
+import com.lionfit.app.data.model.WaterLog
 
 // All entities are listed here
 @Database(
-    entities = [RunSession::class, SleepRecord::class, DietLog::class],
-    version = 6,
+    entities = [RunSession::class, SleepRecord::class, DietLog::class, WaterLog::class],
+    version = 11,
     exportSchema = false
 )
 // Tell Room to use the TypeConverter made for the running map coordinates
@@ -23,6 +24,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun runDao(): RunDao
     abstract fun sleepDao(): SleepDao
     abstract fun dietDao(): DietDao
+    abstract fun waterDao(): WaterDao
+
 
     // Create the Singleton instance
     companion object {
