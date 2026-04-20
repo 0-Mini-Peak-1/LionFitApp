@@ -40,6 +40,10 @@ import io.github.jan.supabase.gotrue.auth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlin.random.Random
+import android.app.Dialog
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
+import android.view.Window
 
 class RunningFragment : Fragment(R.layout.fragment_running) {
     private lateinit var runDao: RunDao
@@ -169,6 +173,7 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
         Configuration.getInstance().userAgentValue = requireContext().packageName
         map = view.findViewById(R.id.map)
         map.setTileSource(TileSourceFactory.MAPNIK)
+        map.setBuiltInZoomControls(false)
         map.setMultiTouchControls(true)
 
         // Initialize MapTrackingManager
@@ -460,16 +465,33 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
     }
 
     private fun showStopConfirmationDialog() {
-        AlertDialog.Builder(requireContext())
-            .setTitle("Do you want to stop tracking?")
-            .setPositiveButton("Confirm") { _, _ ->
-                endRunAndNavigateToSave()
-            }
-            .setNegativeButton("Cancel") { dialogInterface, _ ->
-                dialogInterface.dismiss()
-            }
-            .create()
-            .show()
+        // Create the dialog and attach the custom XML
+        val dialog = Dialog(requireContext())
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_stop_running)
+        // Make the default window background transparent
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        // Make the dialog width match the screen properly
+        dialog.window?.setLayout(
+            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+
+        // Find the buttons inside the custom layout
+        val btnConfirm = dialog.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnConfirmStop)
+        val btnCancel = dialog.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancelStop)
+
+        // Set up the click actions
+        btnConfirm.setOnClickListener {
+            dialog.dismiss()
+            endRunAndNavigateToSave()
+        }
+
+        btnCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.show()
     }
 
     private fun updateButtonVisibility(isTrackingActive: Boolean) {

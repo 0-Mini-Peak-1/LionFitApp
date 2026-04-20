@@ -26,6 +26,7 @@ import com.lionfit.app.ui.auth.AuthFragment
 import com.lionfit.app.ui.dashboard.DashboardFragment
 import com.lionfit.app.ui.profile.ProfileFragment
 import com.lionfit.app.ui.diet.DietFragment
+import com.lionfit.app.ui.sleep.SleepFragment
 
 class MainActivity : AppCompatActivity() {
 
@@ -158,6 +159,3 @@ class MainActivity : AppCompatActivity() {
        transaction.commit()
    }
 }
-
-// --- PLACEHOLDER FRAGMENTS ---
-class SleepFragment : Fragment(R.layout.fragment_placeholder)
