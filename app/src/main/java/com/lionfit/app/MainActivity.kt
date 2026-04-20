@@ -14,7 +14,6 @@ import androidx.appcompat.app.AppCompatDelegate
 import android.widget.ImageView
 import androidx.activity.viewModels
 import coil.load
-import com.lionfit.app.ui.dashboard.DashboardFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.lionfit.app.ui.shared.SharedViewModel
