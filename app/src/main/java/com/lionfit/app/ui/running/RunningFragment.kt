@@ -304,7 +304,7 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
             title = "",
             description = "",
             activityType = "Run",
-            mapSnapshotUrl = null // Starts null, your SaveActivity will fill it!
+            mapSnapshotUrl = null // Starts null, SaveActivity will fill it
         )
 
         // 4. Inject it into the memory box and jump to the Save screen
@@ -446,7 +446,6 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
 
         val fabHistory = view?.findViewById<FloatingActionButton>(R.id.fabHistory)
         fabHistory?.setOnClickListener {
-            // Shout to MainActivity to change the screen!
             (requireActivity() as MainActivity).switchFragment("run_history")
         }
 
@@ -464,7 +463,7 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
         AlertDialog.Builder(requireContext())
             .setTitle("Do you want to stop tracking?")
             .setPositiveButton("Confirm") { _, _ ->
-                simulateFakeRun()
+                endRunAndNavigateToSave()
             }
             .setNegativeButton("Cancel") { dialogInterface, _ ->
                 dialogInterface.dismiss()
@@ -601,6 +600,24 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
                 tvSpeedExpanded.text = "--'--\""
             }
         }
+
+        // Listen for the Cheater Alert
+        com.lionfit.app.services.TrackingService.cheaterAlert.observe(viewLifecycleOwner) { isCheater ->
+            if (isCheater) {
+                // Show the user they got busted
+                androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                    .setTitle("Whoa there, Flash! ⚡")
+                    .setMessage("We detected speeds faster than humanly possible. Are you on a scooter? Your run has been paused to keep the fair game\uD83D\uDDFF.")
+                    .setPositiveButton("Got it") { dialog, _ ->
+                        dialog.dismiss()
+                    }
+                    .setCancelable(false) // Forces them to click the button to dismiss
+                    .show()
+
+                // IMPORTANT: Reset the alert back to false so it doesn't pop up again if they rotate their screen
+                com.lionfit.app.services.TrackingService.cheaterAlert.postValue(false)
+            }
+        }
     }
 
     override fun onResume() {
@@ -626,10 +643,10 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
         }
 
         if (isHidden) {
-            // User switched to Account Tab or locked phone. Kill the preview to save battery!
+            // User switched to Account Tab or locked phone. Kill the preview to save battery
             stopGpsPreview()
         } else {
-            // User is looking at the map waiting to run. Wake up the GPS!
+            // User is looking at the map waiting to run. Wake up the GPS
             startGpsPreview()
         }
     }
