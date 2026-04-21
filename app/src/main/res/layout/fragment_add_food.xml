@@ -8,8 +8,9 @@
     android:clickable="true"
     android:focusable="true">
 
-    <!-- Header with Back Button -->
+    <!-- Container for My Menu (Hidden by default) -->
     <LinearLayout
+        android:id="@+id/layoutMyMenuContent"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:background="#FFC107"
@@ -34,16 +35,8 @@
             android:textSize="18sp"
             android:textStyle="bold"
             android:textColor="#212121"
-            android:gravity="center_vertical" />
-
-        <Button
-            android:id="@+id/btnDoneTop"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/btn_done"
-            android:textColor="#212121"
-            android:textStyle="bold" />
+            android:gravity="center"
+            android:layout_marginEnd="48dp" />
     </LinearLayout>
 
     <!-- Macros Summary Row -->
@@ -124,7 +117,15 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Page 1"
-            android:layout_marginHorizontal="16dp" />
+            android:layout_marginHorizontal="8dp" />
+
+        <Button
+            android:id="@+id/btnMyMenu"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="My Menu"
+            android:textColor="#EF6C00" />
 
         <Button
             android:id="@+id/btnNextPage"
@@ -134,38 +135,55 @@
             android:text="Next" />
     </LinearLayout>
 
-    <!-- Bottom Search Bar -->
+    <!-- Bottom Search Bar Row -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:background="@android:color/white"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="12dp"
         android:elevation="8dp">
 
         <ImageButton
             android:id="@+id/btnAddManual"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:src="@android:drawable/ic_input_add"
             android:background="@drawable/bg_quantity_display"
+            app:tint="#212121"
             android:layout_marginEnd="8dp"
             android:contentDescription="Add New Menu" />
 
         <androidx.appcompat.widget.SearchView
             android:id="@+id/searchFood"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="48dp"
             android:layout_weight="1"
             android:background="@drawable/bg_quantity_display"
             app:queryHint="@string/hint_search_food"
-            app:iconifiedByDefault="false" />
+            app:iconifiedByDefault="false"
+            android:layout_marginEnd="8dp" />
 
+        <Button
+            android:id="@+id/btnDone"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:text="@string/btn_done"
+            android:backgroundTint="#E0E0E0"
+            android:textColor="#212121"
+            android:textStyle="bold"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            app:cornerRadius="8dp" />
 
     </LinearLayout>
 
+    <!-- Container for My Menu (Hidden by default) -->
+    <FrameLayout
+        android:id="@+id/containerMyMenu"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
 </LinearLayout>

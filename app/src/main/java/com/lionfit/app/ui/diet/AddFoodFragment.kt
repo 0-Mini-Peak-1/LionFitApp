@@ -1,19 +1,22 @@
 package com.lionfit.app.ui.diet
 
-import android.app.AlertDialog
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.chip.Chip
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.lionfit.app.R
 import com.lionfit.app.data.database.AppDatabase
 import com.lionfit.app.data.database.SupabaseManager
@@ -90,7 +93,11 @@ class AddFoodFragment : Fragment(R.layout.fragment_add_food) {
             }
         }
 
-        view.findViewById<View>(R.id.btnDoneTop).setOnClickListener {
+        view.findViewById<Button>(R.id.btnMyMenu).setOnClickListener {
+            showMyMenuDialog(rvResults, view)
+        }
+
+        view.findViewById<View>(R.id.btnDone).setOnClickListener {
             saveAllSelectedFood()
         }
         view.findViewById<View>(R.id.btnBack).setOnClickListener {
@@ -182,24 +189,157 @@ class AddFoodFragment : Fragment(R.layout.fragment_add_food) {
             val serving = etServing.text.toString().ifEmpty { "1 serving" }
 
             if (name.isNotEmpty()) {
-                val newFood = FoodResult(name, cal, serving, protein, fat, carb)
-                allFoodResults.add(0, newFood)
-                
-                // Also save to Supabase foods table
                 lifecycleScope.launch {
-                    SupabaseManager.addNewFood(FoodItem(
-                        name = name, calories = cal, fat = fat.toInt(), carb = carb.toInt(), protein = protein.toInt(), serving_size = serving
+                    val currentUserId = SupabaseManager.client.auth.currentUserOrNull()?.id ?: "anonymous"
+                    
+                    val result = SupabaseManager.addNewPrivateFood(com.lionfit.app.data.model.PrivateFood(
+                        name = name, 
+                        calories = cal, 
+                        fat = fat.toInt(), 
+                        carb = carb.toInt(), 
+                        protein = protein.toInt(), 
+                        servingSize = serving,
+                        userId = currentUserId
                     ))
+
+                    result.onSuccess {
+                        val newFood = FoodResult(name, cal, serving, protein, fat, carb)
+                        allFoodResults.add(0, newFood)
+                        filterAndDisplay("", rv, view)
+                        dialog.dismiss()
+                    }.onFailure { exception ->
+                        val msg = if (exception.message == "ALREADY_EXISTS") {
+                            "This food already exists!"
+                        } else {
+                            "Error: ${exception.localizedMessage}"
+                        }
+                        Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
+                    }
                 }
-                
-                filterAndDisplay("", rv, view)
-                dialog.dismiss()
             } else {
                 Toast.makeText(requireContext(), "Please enter food name", Toast.LENGTH_SHORT).show()
             }
         }
 
         dialog.show()
+    }
+
+    private fun showMyMenuDialog(rvResults: RecyclerView, mainView: View) {
+        lifecycleScope.launch {
+            val currentUser = SupabaseManager.client.auth.currentUserOrNull() ?: return@launch
+            // ดึงเฉพาะ private_foods ของเราจริงๆ มาแสดงเพื่อให้แก้ไข/ลบได้
+            val privateFoods = SupabaseManager.getOnlyPrivateFoods()
+
+            val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_my_menu_list, null)
+            val rvMyMenu = dialogView.findViewById<RecyclerView>(R.id.rvMyMenuPopup)
+            val btnClose = dialogView.findViewById<Button>(R.id.btnClosePopup)
+
+            val dialog = MaterialAlertDialogBuilder(requireContext(), R.style.MaterialAlertDialog_Rounded)
+                .setView(dialogView)
+                .create()
+
+            dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+            rvMyMenu.layoutManager = LinearLayoutManager(requireContext())
+
+            class MyMenuViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+                val tvName: TextView = view.findViewById(R.id.tvFoodName)
+                val btnEdit: ImageButton = view.findViewById(R.id.btnEdit)
+                val btnDelete: ImageButton = view.findViewById(R.id.btnDelete)
+            }
+
+            rvMyMenu.adapter = object : RecyclerView.Adapter<MyMenuViewHolder>() {
+                override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyMenuViewHolder {
+                    return MyMenuViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.item_my_menu_popup, parent, false))
+                }
+
+                override fun onBindViewHolder(holder: MyMenuViewHolder, position: Int) {
+                    val food = privateFoods[position]
+                    holder.tvName.text = food.name
+                    holder.btnEdit.setOnClickListener {
+                        dialog.dismiss()
+                        showEditMenuDialog(food, rvResults, mainView)
+                    }
+                    holder.btnDelete.setOnClickListener {
+                        showDeleteConfirmDialog(food.name, rvResults, mainView) {
+                            dialog.dismiss()
+                        }
+                    }
+                }
+
+                override fun getItemCount() = privateFoods.size
+            }
+
+            btnClose.setOnClickListener { dialog.dismiss() }
+            dialog.show()
+
+            // ปรับให้ Dialog ยืดเต็มความกว้าง 90% ของหน้าจอ
+            dialog.window?.setLayout(
+                (resources.displayMetrics.widthPixels * 0.90).toInt(),
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+    }
+
+    private fun showEditMenuDialog(food: com.lionfit.app.data.model.PrivateFood, rvResults: RecyclerView, mainView: View) {
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_add_custom_food, null)
+        val etName = dialogView.findViewById<EditText>(R.id.etFoodName)
+        val etCal = dialogView.findViewById<EditText>(R.id.etCalories)
+        val etProtein = dialogView.findViewById<EditText>(R.id.etProtein)
+        val etFat = dialogView.findViewById<EditText>(R.id.etFat)
+        val etCarb = dialogView.findViewById<EditText>(R.id.etCarb)
+        val btnSave = dialogView.findViewById<Button>(R.id.btnSaveCustomFood)
+
+        // Pre-fill data
+        etName.setText(food.name)
+        etName.isEnabled = false // ห้ามแก้ชื่อ
+        etCal.setText(food.calories.toString())
+        etProtein.setText(food.protein.toString())
+        etFat.setText(food.fat.toString())
+        etCarb.setText(food.carb.toString())
+
+        val dialog = AlertDialog.Builder(requireContext())
+            .setView(dialogView)
+            .create()
+
+        btnSave.setOnClickListener {
+            val cal = etCal.text.toString().toIntOrNull() ?: 0
+            val p = etProtein.text.toString().toIntOrNull() ?: 0
+            val f = etFat.text.toString().toIntOrNull() ?: 0
+            val c = etCarb.text.toString().toIntOrNull() ?: 0
+
+            lifecycleScope.launch {
+                val updatedFood = food.copy(calories = cal, protein = p, fat = f, carb = c)
+                SupabaseManager.deletePrivateFood(food.name)
+                val result = SupabaseManager.addNewPrivateFood(updatedFood)
+                if (result.isSuccess) {
+                    Toast.makeText(requireContext(), "Updated successfully", Toast.LENGTH_SHORT).show()
+                    dialog.dismiss()
+                    loadFoodsFromCloud(rvResults, mainView)
+                }
+            }
+        }
+        dialog.show()
+    }
+
+    private fun showDeleteConfirmDialog(foodName: String, rvResults: RecyclerView, mainView: View, onDeleted: () -> Unit) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Delete Menu")
+            .setMessage("Are you sure you want to delete '$foodName'?")
+            .setPositiveButton("Delete") { _, _ ->
+                lifecycleScope.launch {
+                    val success = SupabaseManager.deletePrivateFood(foodName)
+                    if (success) {
+                        Toast.makeText(requireContext(), "Deleted successfully", Toast.LENGTH_SHORT).show()
+                        onDeleted()
+                        loadFoodsFromCloud(rvResults, mainView) // Refresh list
+                    } else {
+                        Toast.makeText(requireContext(), "Failed to delete", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun saveAllSelectedFood() {
