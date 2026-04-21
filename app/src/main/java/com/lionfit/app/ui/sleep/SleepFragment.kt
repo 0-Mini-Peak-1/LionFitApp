@@ -308,7 +308,7 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
     private fun showInfoDialog() {
         AlertDialog.Builder(requireContext())
             .setTitle("Information")
-            .setMessage("เลือกเวลานอนของคุณ กราฟนี้จะแสดงชั่วโมงการนอนเฉลี่ยของคุณ 1 สัปดาห์")
+            .setMessage("Select your sleep time. This graph will display your average sleep hours over one week.")
             .setPositiveButton("OK", null)
             .show()
     }
