@@ -29,4 +29,11 @@
     <item name="strokeColor">@android:color/transparent</item>
     <item name="backgroundTint">@android:color/transparent</item>
 </style>
+    <style name="MaterialAlertDialog_Rounded" parent="Theme.MaterialComponents.Light.Dialog.Alert">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.LionFit.Dialog.Rounded</item>
+    </style>
+
+    <style name="ShapeAppearanceOverlay.LionFit.Dialog.Rounded" parent="">
+        <item name="cornerSize">24dp</item>
+    </style>
 </resources>

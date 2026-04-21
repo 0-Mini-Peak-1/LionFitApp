@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_dialog_rounded"
+    android:paddingTop="24dp"
+    android:paddingBottom="12dp">
+
+    <TextView
+        android:id="@+id/tvDialogTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="My Custom Menus"
+        android:textSize="22sp"
+        android:fontFamily="sans-serif-medium"
+        android:textColor="#1A1A1A"
+        android:layout_marginHorizontal="24dp"
+        android:layout_marginBottom="4dp" />
+
+    <View
+        android:layout_width="32dp"
+        android:layout_height="4dp"
+        android:background="#6200EE"
+        android:layout_marginHorizontal="24dp"
+        android:layout_marginBottom="16dp" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvMyMenuPopup"
+        android:layout_width="match_parent"
+        android:layout_height="350dp"
+        android:paddingHorizontal="16dp"
+        android:clipToPadding="false"
+        android:overScrollMode="never" />
+
+    <Button
+        android:id="@+id/btnClosePopup"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end"
+        android:layout_marginHorizontal="16dp"
+        android:text="Close"
+        android:textColor="#6200EE"
+        android:textSize="14sp"
+        android:fontFamily="sans-serif-medium"
+        android:textAllCaps="true"
+        android:layout_marginTop="8dp" />
+
+</LinearLayout>

@@ -215,20 +215,75 @@ object SupabaseManager {
         } catch (e: Exception) { emptyList() }
     }
 
-    // ดึงรายการอาหารทั้งหมดจากตาราง foods
+    // ดึงรายการอาหารทั้งหมด (รวมจาก foods กลาง และ private_foods ของผู้ใช้)
     suspend fun getAllFoods(): List<com.lionfit.app.data.model.FoodItem> {
+        val currentUser = client.auth.currentUserOrNull()
         return try {
-            client.postgrest.from("foods").select().decodeList<com.lionfit.app.data.model.FoodItem>()
+            val publicFoods = client.postgrest.from("foods").select().decodeList<com.lionfit.app.data.model.FoodItem>()
+            
+            val privateFoods = if (currentUser != null) {
+                client.postgrest.from("private_foods")
+                    .select { filter { eq("user_id", currentUser.id) } }
+                    .decodeList<com.lionfit.app.data.model.PrivateFood>()
+                    .map { 
+                        com.lionfit.app.data.model.FoodItem(
+                            name = it.name,
+                            calories = it.calories,
+                            fat = it.fat,
+                            carb = it.carb,
+                            protein = it.protein,
+                            serving_size = it.servingSize
+                        )
+                    }
+            } else emptyList()
+
+            (publicFoods + privateFoods).distinctBy { it.name.lowercase() }
         } catch (e: Exception) {
             e.printStackTrace()
             emptyList()
         }
     }
 
-    // บันทึกเมนูอาหารใหม่ลงตาราง foods
-    suspend fun addNewFood(food: com.lionfit.app.data.model.FoodItem): Boolean {
+    // ดึงเฉพาะเมนูอาหารส่วนตัวของผู้ใช้
+    suspend fun getOnlyPrivateFoods(): List<com.lionfit.app.data.model.PrivateFood> {
+        val currentUser = client.auth.currentUserOrNull() ?: return emptyList()
         return try {
-            client.postgrest.from("foods").insert(food)
+            client.postgrest.from("private_foods")
+                .select { filter { eq("user_id", currentUser.id) } }
+                .decodeList<com.lionfit.app.data.model.PrivateFood>()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    // บันทึกเมนูอาหารใหม่ลงตาราง private_foods และเช็คชื่อซ้ำ
+    suspend fun addNewPrivateFood(food: com.lionfit.app.data.model.PrivateFood): Result<Unit> {
+        return try {
+            // เช็คชื่อซ้ำในรายการอาหารที่มีอยู่แล้ว
+            val existing = getAllFoods()
+            if (existing.any { it.name.equals(food.name, ignoreCase = true) }) {
+                return Result.failure(Exception("ALREADY_EXISTS"))
+            }
+            
+            client.postgrest.from("private_foods").insert(food)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+
+    // ลบเมนูอาหารส่วนตัว
+    suspend fun deletePrivateFood(name: String): Boolean {
+        val currentUser = client.auth.currentUserOrNull() ?: return false
+        return try {
+            client.postgrest.from("private_foods").delete {
+                filter {
+                    eq("user_id", currentUser.id)
+                    eq("name", name)
+                }
+            }
             true
         } catch (e: Exception) {
             e.printStackTrace()
