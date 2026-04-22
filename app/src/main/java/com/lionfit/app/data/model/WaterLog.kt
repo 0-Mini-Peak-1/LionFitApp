@@ -25,5 +25,9 @@ data class WaterLog(
 
     @SerialName("date_logged")
     @ColumnInfo(name = "date_logged")
-    val dateLogged: Long = System.currentTimeMillis()
+    val dateLogged: Long = System.currentTimeMillis(),
+
+    @SerialName("created_at")
+    @ColumnInfo(name = "created_at")
+    val createdAt: String = java.time.Instant.now().toString()
 )

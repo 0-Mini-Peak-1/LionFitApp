@@ -105,6 +105,53 @@ class DietFragment : Fragment(R.layout.fragment_diet) {
             }
         }
 
+        view.findViewById<View>(R.id.btnUndoWater)?.setOnClickListener {
+            // เช็คว่ามีปุ่มให้กดไหม
+            android.util.Log.d("UndoWater", "ปุ่มถูกกดแล้ว!")
+
+            val currentUser = SupabaseManager.client.auth.currentUserOrNull()
+            if (currentUser == null) {
+                android.widget.Toast.makeText(requireContext(), "Error: ไม่พบ User (คุณล็อกอินหรือยัง?)", android.widget.Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            lifecycleScope.launch {
+                try {
+                    // 1. คำนวณหาเวลาเริ่มต้นและสิ้นสุดของวันที่กำลังเลือกอยู่ (selectedDate)
+                    val startOfDay = selectedDate.clone() as java.util.Calendar
+                    startOfDay.set(java.util.Calendar.HOUR_OF_DAY, 0)
+                    startOfDay.set(java.util.Calendar.MINUTE, 0)
+                    startOfDay.set(java.util.Calendar.SECOND, 0)
+                    startOfDay.set(java.util.Calendar.MILLISECOND, 0)
+
+                    val endOfDay = selectedDate.clone() as java.util.Calendar
+                    endOfDay.set(java.util.Calendar.HOUR_OF_DAY, 23)
+                    endOfDay.set(java.util.Calendar.MINUTE, 59)
+                    endOfDay.set(java.util.Calendar.SECOND, 59)
+                    endOfDay.set(java.util.Calendar.MILLISECOND, 999)
+
+                    // 2. ค้นหาน้ำแก้วล่าสุดของวันนี้
+                    val latestLog = db.waterDao().getLatestWaterLogOfDate(currentUser.id, startOfDay.timeInMillis, endOfDay.timeInMillis)
+
+                    if (latestLog != null) {
+                        // 3. ลบออกจาก Local (เครื่อง)
+                        db.waterDao().deleteWaterLog(latestLog)
+
+                        // 4. ลบออกจาก Cloud (Supabase)
+                        SupabaseManager.deleteWaterLogFromCloud(latestLog.id)
+
+                        // ถ้ามาถึงตรงนี้ได้ แสดงว่าลบสำเร็จ 100%
+                        android.widget.Toast.makeText(requireContext(), "Undo ${latestLog.amountMl} ml", android.widget.Toast.LENGTH_SHORT).show()
+                    } else {
+                        android.widget.Toast.makeText(requireContext(), "ไม่พบประวัติ", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    // ถ้าพังระหว่างทาง มันจะฟ้องข้อความตรงนี้
+                    android.widget.Toast.makeText(requireContext(), "Error: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+
         observeDietData(view)
     }
 

@@ -38,6 +38,7 @@
 
     <!-- Buttons -->
     <string name="btn_add">Add</string>
+    <string name="btn_undo">Undo</string>
     <string name="btn_done">Done</string>
     <string name="btn_sign_in">Sign In</string>
     <string name="btn_sign_up">Sign Up</string>
