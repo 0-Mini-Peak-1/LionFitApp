@@ -266,6 +266,20 @@
 
                     </LinearLayout>
 
+                    <TextView
+                        android:id="@+id/btnUndoWater"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/btn_undo"
+                        android:textColor="#E53935"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="8dp"
+                        android:background="?attr/selectableItemBackground"
+                        android:clickable="true"
+                        android:focusable="true" />
+
                     <Button
                         android:id="@+id/btnAddWater"
                         style="@style/Widget.MaterialComponents.Button.OutlinedButton"

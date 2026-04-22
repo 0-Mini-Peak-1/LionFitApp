@@ -161,6 +161,19 @@ object SupabaseManager {
         }
     }
 
+    // ลบข้อมูล WaterLog จาก Cloud
+    suspend fun deleteWaterLogFromCloud(logId: String): Boolean {
+        return try {
+            client.postgrest["water_logs"].delete {
+                filter { eq("id", logId) }
+            }
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
     // Sync Water to Cloud
     suspend fun syncWaterToCloud(waterLog: com.lionfit.app.data.model.WaterLog): Boolean {
         val currentUser = client.auth.currentUserOrNull() ?: return false

@@ -1,6 +1,7 @@
 package com.lionfit.app.data.database
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -20,4 +21,10 @@ interface WaterDao {
 
     @Query("DELETE FROM water_logs_table")
     suspend fun clearAll()
+
+    @Query("SELECT * FROM water_logs_table WHERE user_id = :userId AND date_logged >= :startOfDay AND date_logged <= :endOfDay ORDER BY rowid DESC LIMIT 1")
+    suspend fun getLatestWaterLogOfDate(userId: String, startOfDay: Long, endOfDay: Long): com.lionfit.app.data.model.WaterLog?
+
+    @Delete
+    suspend fun deleteWaterLog(waterLog: com.lionfit.app.data.model.WaterLog)
 }
