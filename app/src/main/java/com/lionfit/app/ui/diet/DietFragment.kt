@@ -266,16 +266,27 @@ class DietFragment : Fragment(R.layout.fragment_diet) {
             launch {
                 db.dietDao().getDietLogsForRange(startOfDay.timeInMillis, endOfDay.timeInMillis).collectLatest { logs ->
                     val totalCals = logs.sumOf { it.calories }
-                    val kcalLeft  = (goalCalories - totalCals).coerceAtLeast(0)
+                    val goalCalories = resources.getInteger(R.integer.goal_calories)
 
-                    tvEaten.text    = totalCals.toString()
-                    tvKcalLeft.text = if (totalCals > goalCalories)
-                        getString(R.string.label_kcal_over)
-                    else
-                        kcalLeft.toString()
+                    tvEaten.text = totalCals.toString()
+                    
+                    if (totalCals > goalCalories) {
+                        val over = totalCals - goalCalories
+                        tvKcalLeft.text = over.toString()
+                        view.findViewById<TextView>(R.id.tvKcalLeftLabel)?.text = getString(R.string.label_kcal_over)
+                        progressKcalLeft.setIndicatorColor(Color.RED)
+                    } else {
+                        val kcalLeft = goalCalories - totalCals
+                        tvKcalLeft.text = kcalLeft.toString()
+                        view.findViewById<TextView>(R.id.tvKcalLeftLabel)?.text = getString(R.string.label_kcal_left)
+                        progressKcalLeft.setIndicatorColor(Color.parseColor("#CDDC39"))
+                    }
 
                     progressEaten.progress    = totalCals.coerceAtMost(goalCalories)
-                    progressKcalLeft.progress = kcalLeft
+                    progressKcalLeft.progress = if (totalCals > goalCalories) 
+                        (totalCals - goalCalories).coerceAtMost(goalCalories)
+                    else 
+                        (goalCalories - totalCals)
 
                     renderMealItems(llBreakfast, logs.filter { it.mealType == "Breakfast" })
                     renderMealItems(llLunch,     logs.filter { it.mealType == "Lunch" })
