@@ -17,15 +17,19 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.lionfit.app.data.database.SupabaseManager
 import io.github.jan.supabase.gotrue.auth
 import androidx.compose.material3.MaterialTheme
 import com.lionfit.app.MainActivity
-import com.lionfit.app.ui.history.RunHistoryFragment
 import java.time.LocalDate
 import java.time.DayOfWeek
 import java.time.temporal.TemporalAdjusters
 import com.lionfit.app.ui.sleep.SleepChartContent
+import kotlinx.coroutines.flow.combine
+import com.lionfit.app.utils.Calculators
+import androidx.viewpager2.widget.ViewPager2
+import kotlinx.coroutines.delay
 
 /**
  * Fragment สำหรับแสดงหน้า Dashboard หลักของแอปพลิเคชัน
@@ -54,6 +58,7 @@ class DashboardFragment : Fragment() {
         observeDietData(view)
         observeRunData(view)
         observeSleepData(view)
+
         val swipeRefreshLayout = view.findViewById<androidx.swiperefreshlayout.widget.SwipeRefreshLayout>(R.id.swipeRefreshLayout)
         swipeRefreshLayout.setOnRefreshListener {
             // เมื่อดึงลงมา ให้สั่งโหลดข้อมูลใหม่ทั้งหมด
@@ -70,25 +75,73 @@ class DashboardFragment : Fragment() {
      * ตั้งค่าส่วนแบนเนอร์ด้านบนสุดของหน้า Dashboard
      */
     private fun setupBanner(view: View) {
-        val bannerImage = view.findViewById<ImageView>(R.id.bannerImage)
-        // โหลดรูปภาพตัวอย่างจาก URL โดยใช้ Coil
-        bannerImage.load("https://images.unsplash.com/photo-1615484477778-ca3b77940c25?q=80&w=1000&auto=format&fit=crop") {
-            crossfade(true)
-            placeholder(android.R.drawable.ic_menu_gallery)
+        val viewPager = view.findViewById<ViewPager2>(R.id.bannerViewPager)
+
+        // Replace with ads or anything
+        val adImages = listOf(
+            "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1000&auto=format&fit=crop", // Gym ad
+            "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?q=80&w=1000&auto=format&fit=crop", // Running shoes ad
+            "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?q=80&w=1000&auto=format&fit=crop"  // Healthy food ad
+        )
+
+        // Attach the adapter
+        viewPager.adapter = BannerAdapter(adImages)
+
+        // The Auto-Sliding
+        viewLifecycleOwner.lifecycleScope.launch {
+            while (true) {
+                delay(3500) // Wait 3.5 seconds
+
+                // If we aren't at the end of the list, go to the next one. Otherwise, loop back to 0
+                if (viewPager.adapter != null) {
+                    val itemCount = viewPager.adapter?.itemCount ?: 0
+                    if (itemCount > 0) {
+                        val nextItem = (viewPager.currentItem + 1) % itemCount
+                        viewPager.setCurrentItem(nextItem, true) // 'true' makes it slide smoothly
+                    }
+                }
+            }
         }
+    }
+
+    inner class BannerAdapter(private val imageUrls: List<String>) :
+        androidx.recyclerview.widget.RecyclerView.Adapter<BannerAdapter.BannerViewHolder>() {
+
+        inner class BannerViewHolder(val imageView: ImageView) : androidx.recyclerview.widget.RecyclerView.ViewHolder(imageView)
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): BannerViewHolder {
+            val imageView = ImageView(parent.context).apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                scaleType = ImageView.ScaleType.CENTER_CROP
+            }
+            return BannerViewHolder(imageView)
+        }
+
+        override fun onBindViewHolder(holder: BannerViewHolder, position: Int) {
+            holder.imageView.load(imageUrls[position]) {
+                crossfade(true)
+                placeholder(android.R.drawable.ic_menu_gallery)
+            }
+        }
+
+        override fun getItemCount() = imageUrls.size
     }
 
     /**
      * ดึงข้อมูลและติดตามการเปลี่ยนแปลงของข้อมูลอาหาร (แคลอรี่) ของวันนี้
+     * พร้อมระบบประมวลผล BMR/TDEE และคำแนะนำการออกกำลังกาย (Smart Suggestion)
      */
     private fun observeDietData(view: View) {
-        val tvEatenCal = view.findViewById<TextView>(R.id.tvEatenCal)
+        val tvNetCal = view.findViewById<TextView>(R.id.tvEatenCal)
         val tvOverCal = view.findViewById<TextView>(R.id.tvOverCal)
         val tvGoalCal = view.findViewById<TextView>(R.id.tvGoalCal)
 
-        // ดึงค่าเป้าหมายแคลอรี่จากทรัพยากรของระบบ
-        val goalCalories = resources.getInteger(R.integer.goal_calories)
-        tvGoalCal.text = String.format(Locale.getDefault(), "%,d", goalCalories)
+        // ผูก UI ของ Suggestion Card (อย่าลืมเพิ่มใน XML)
+        val cardSuggestion = view.findViewById<com.google.android.material.card.MaterialCardView>(R.id.cardSuggestion)
+        val tvSuggestionText = view.findViewById<TextView>(R.id.tvSuggestionText)
 
         // คำนวณช่วงเวลาเริ่มต้นและสิ้นสุดของวันนี้
         val calendar = Calendar.getInstance()
@@ -103,16 +156,104 @@ class DashboardFragment : Fragment() {
         calendar.set(Calendar.SECOND, 59)
         val endOfDay = calendar.timeInMillis
 
-        // ติดตามข้อมูลจาก dietDao
-        lifecycleScope.launch {
-            db.dietDao().getDietLogsForRange(startOfDay, endOfDay).collectLatest { logs ->
+        viewLifecycleOwner.lifecycleScope.launch {
+            // 1. กำหนดค่าพื้นฐานไว้ก่อน (เผื่ออินเทอร์เน็ตมีปัญหา)
+            var dynamicGoal = resources.getInteger(R.integer.goal_calories)
+            var userWeight = 70.0
+
+            // 2. ดึงข้อมูลส่วนตัวจาก Supabase มาคำนวณ TDEE แบบไดนามิก
+            withContext(Dispatchers.IO) {
+                try {
+                    val currentUser = SupabaseManager.client.auth.currentUserOrNull()
+                    if (currentUser != null) {
+                        val profile = SupabaseManager.getProfile(currentUser.id)
+                        if (profile != null) {
+                            userWeight = if (profile.weightKg > 0) profile.weightKg else 70.0
+                            val height = if (profile.heightCm > 0) profile.heightCm else 170.0
+                            val age = Calculators.calculateAge(profile.birthDate)
+                            val gender = profile.gender ?: "male"
+
+                            // คำนวณสมการ Mifflin-St Jeor
+                            val bmr = Calculators.calculateBMR(userWeight, height, age, gender)
+                            dynamicGoal = Calculators.calculateTDEE(bmr).toInt()
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+            // อัปเดตตัวเลขเป้าหมายในวงกลมส้ม
+            tvGoalCal.text = String.format(Locale.getDefault(), "%,d", dynamicGoal)
+
+            // เริ่มรวม Flow ของอาหารและการวิ่ง
+            val dietFlow = db.dietDao().getDietLogsForRange(startOfDay, endOfDay)
+            val runFlow = db.runDao().getAllRunsSortedByDate()
+
+            dietFlow.combine(runFlow) { logs, runs ->
                 val totalEaten = logs.sumOf { it.calories }
-                // แสดงยอดที่ทานไปแล้ว
-                tvEatenCal.text = String.format(Locale.getDefault(), "%,d", totalEaten)
-                
-                // คำนวณแคลอรี่ที่เกินจากเป้าหมาย
-                val diff = totalEaten - goalCalories
+                val todayRuns = runs.filter { it.timestamp in startOfDay..endOfDay }
+                val totalBurned = todayRuns.sumOf { it.caloriesBurned }
+
+                // ส่ง Net Calories ออกไป
+                totalEaten - totalBurned
+            }.collectLatest { netCalories ->
+
+                // Format the Net Calories
+                tvNetCal.text = String.format(Locale.getDefault(), "%,d", netCalories)
+
+                val diff = netCalories - dynamicGoal
                 tvOverCal.text = if (diff > 0) String.format(Locale.getDefault(), "%,d", diff) else "0"
+
+                // THE SMART SUGGESTION ENGINE
+                if (cardSuggestion != null && tvSuggestionText != null) {
+                    cardSuggestion.visibility = View.VISIBLE
+
+                    if (diff > 0) {
+                        // STATE 1: Over Goal (Surplus) -> Suggest Exercise with Paces!
+                        // We use maxOf(1, ...) to ensure it never says "0 mins" if they are only 5 kcal over
+                        val walkMins = maxOf(1, ((diff.toDouble() / (3.5 * userWeight)) * 60).toInt())
+                        val jogMins = maxOf(1, ((diff.toDouble() / (8.0 * userWeight)) * 60).toInt())
+                        val runMins = maxOf(1, ((diff.toDouble() / (9.8 * userWeight)) * 60).toInt())
+
+                        cardSuggestion.setCardBackgroundColor(android.graphics.Color.parseColor("#FFF3E0")) // Soft Orange
+                        tvSuggestionText.text = "You are ${String.format(Locale.getDefault(), "%,d", diff)} kcal over your target. Burn it off with:\n\n" +
+                                "🚶 Walk (Light, ~12:30/km): ${String.format(Locale.getDefault(), "%,d", walkMins)} mins\n" +
+                                "🏃 Jog (Medium, ~7:30/km): ${String.format(Locale.getDefault(), "%,d", jogMins)} mins\n" +
+                                "🏃\u200D♂\uFE0F\uD83D\uDCA8 Run (Fast, ~6:00/km): ${String.format(Locale.getDefault(), "%,d", runMins)} mins"
+
+                    } else if (diff < 0) {
+                        // Under Goal (Deficit) -> We break this into 3 specific zones
+                        val deficit = -diff
+                        val formattedDeficit = String.format(Locale.getDefault(), "%,d", deficit)
+
+                        if (deficit in 300..700) {
+                            // STATE 2: The Weight Loss "Sweet Spot" (300 - 700 kcal deficit)
+                            cardSuggestion.setCardBackgroundColor(android.graphics.Color.parseColor("#E8F5E9")) // Soft Blue
+                            tvSuggestionText.text = "You are $formattedDeficit kcal under your goal. This is a great range! If you maintain this daily deficit, you can expect to lose about 0.5 kg per week safely."
+
+                        } else if (deficit > 700) {
+                            // STATE 3: Too low! (Dangerous deficit)
+                            cardSuggestion.setCardBackgroundColor(android.graphics.Color.parseColor("#f7abab")) // Soft Red
+                            tvSuggestionText.text = "You are $formattedDeficit kcal short of your daily goal. Your deficit is quite high! Treat yourself to a healthy meal to keep your metabolism running properly."
+
+                        } else {
+                            // STATE 4: Close to the goal (1 - 299 kcal deficit)
+                            // Calculate how much more they need to burn to reach the 300 kcal weight loss zone
+                            val extraBurnNeeded = 300 - deficit
+                            val extraJogMins = maxOf(1, ((extraBurnNeeded.toDouble() / (8.0 * userWeight)) * 60).toInt())
+
+                            cardSuggestion.setCardBackgroundColor(android.graphics.Color.parseColor("#F3E5F5")) // Soft Purple
+                            tvSuggestionText.text = "You are $formattedDeficit kcal under your goal. This is perfect for maintaining your weight!\n\n" +
+                                    "Want to reach the weight loss zone? Burn $extraBurnNeeded more kcal with a quick $extraJogMins-minute jog (~7:30/km)!"
+                        }
+
+                    } else {
+                        // STATE 5: Exactly 0
+                        cardSuggestion.setCardBackgroundColor(android.graphics.Color.parseColor("#E3F2FD")) // Soft Blue
+                        tvSuggestionText.text = "Perfect! You hit your calorie goal exactly. Keep up the great work!"
+                    }
+                }
             }
         }
     }
@@ -135,11 +276,9 @@ class DashboardFragment : Fragment() {
 
         // 1. ให้ UI เฝ้ามองการวิ่งล่าสุดจาก Room (อัปเดตทันทีที่กลับมาจาก SaveActivity)
         viewLifecycleOwner.lifecycleScope.launch {
-            // สมมติว่ามีฟังก์ชัน getAllRuns() หรือดึงรายการวิ่งล่าสุดใน runDao
             db.runDao().getAllRunsSortedByDate().collectLatest { runs ->
                 if (runs.isNotEmpty()) {
-                    // จัดการแสดงผลข้อมูลจาก Local
-                    val lastRun = runs.first() // ดึงข้อมูลอันล่าสุด
+                    val lastRun = runs.first()
 
                     tvTitle.text = lastRun.title
                     val sdf = SimpleDateFormat("dd/MM/yyyy 'at' hh:mm a", Locale.getDefault())
@@ -163,14 +302,13 @@ class DashboardFragment : Fragment() {
             }
         }
 
-        // 2. ดึงข้อมูลจาก Supabase มาอัปเดตลง Room (ทำเบื้องหลัง)
+        // ดึงข้อมูลจาก Supabase มาอัปเดตลง Room (ทำเบื้องหลัง)
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val currentUser = SupabaseManager.client.auth.currentUserOrNull()
                 if (currentUser != null) {
                     val cloudRuns = SupabaseManager.getUserRunHistory(currentUser.id)
                     if (cloudRuns.isNotEmpty()) {
-                        // อัปเดตข้อมูลวิ่งทั้งหมดลง Room
                         db.runDao().insertAllRuns(cloudRuns)
                     }
                 }
@@ -186,28 +324,25 @@ class DashboardFragment : Fragment() {
     private fun observeSleepData(view: View) {
         val tvHours = view.findViewById<TextView>(R.id.tvSleepAvgHours)
         val tvMins = view.findViewById<TextView>(R.id.tvSleepAvgMins)
+        val cardSleep = view.findViewById<com.google.android.material.card.MaterialCardView>(R.id.cardSleep)
 
-        // Find the Compose Bridge
+        cardSleep?.setOnClickListener {
+            (requireActivity() as MainActivity).switchFragment("sleep")
+        }
+
         val composeView = view.findViewById<androidx.compose.ui.platform.ComposeView>(R.id.dashboard_sleep_chart)
-
-        //
         composeView.setContent {
             MaterialTheme {
                 SleepChartContent(
                     records = dashboardSleepRecords,
                     startOfWeek = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY)),
                     selectedRecord = null,
-                    onRecordClick = {
-//                        val bottomNav = requireActivity().findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
-//                        bottomNav?.selectedItemId = R.id.nav_sleep
-                        (requireActivity() as MainActivity).switchFragment("sleep")
-
-                    }
+                    onRecordClick = { }
                 )
             }
         }
 
-        // 1. ให้ UI เฝ้ามอง Room Database (ทำงานแบบ Real-time)
+        // ให้ UI เฝ้ามอง Room Database (ทำงานแบบ Real-time)
         viewLifecycleOwner.lifecycleScope.launch {
             db.sleepDao().getAllSleepRecords().collectLatest { records ->
 
@@ -233,9 +368,7 @@ class DashboardFragment : Fragment() {
             try {
                 val currentUser = SupabaseManager.client.auth.currentUserOrNull()
                 if (currentUser != null) {
-                    // ดึงข้อมูล Sleep ล่าสุดจาก Cloud
-                    val cloudSleepRecords = SupabaseManager.getUserSleepHistory(currentUser.id) // สมมติว่าใช้ชื่อฟังก์ชันนี้ใน SupabaseManager
-
+                    val cloudSleepRecords = SupabaseManager.getUserSleepHistory(currentUser.id)
                     if (cloudSleepRecords.isNotEmpty()) {
                         db.sleepDao().insertAllSleepRecords(cloudSleepRecords)
                     }

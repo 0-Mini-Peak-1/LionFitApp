@@ -35,12 +35,12 @@
     <LinearLayout
         android:id="@+id/llDisplayMode"
         android:layout_width="0dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
         android:orientation="vertical"
         android:visibility="visible"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/ivProfilePicture">
 
         <TextView
@@ -57,8 +57,8 @@
             android:id="@+id/tvEmailDisplay"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center"
             android:layout_marginTop="2dp"
+            android:gravity="center"
             android:text="user@email.com"
             android:textColor="@color/text_grey_light"
             android:textSize="14sp" />
@@ -80,17 +80,17 @@
                 android:orientation="vertical">
 
                 <TextView
+                    style="@style/TextAppearance.LionFit.StatLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Height"
-                    style="@style/TextAppearance.LionFit.StatLabel" />
+                    android:text="Height" />
 
                 <TextView
                     android:id="@+id/tvHeightDisplay"
+                    style="@style/TextAppearance.LionFit.StatValue"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="-- cm"
-                    style="@style/TextAppearance.LionFit.StatValue" />
+                    android:text="-- cm" />
             </LinearLayout>
 
             <LinearLayout
@@ -101,17 +101,41 @@
                 android:orientation="vertical">
 
                 <TextView
+                    style="@style/TextAppearance.LionFit.StatLabel"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Weight"
-                    style="@style/TextAppearance.LionFit.StatLabel" />
+                    android:text="Weight" />
 
-                <TextView
-                    android:id="@+id/tvWeightDisplay"
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="-- kg"
-                    style="@style/TextAppearance.LionFit.StatValue" />
+                    android:layout_marginTop="4dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageButton
+                        android:id="@+id/btnWeightDown"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_remove" />
+
+                    <TextView
+                        android:id="@+id/tvWeightDisplay"
+                        style="@style/TextAppearance.LionFit.StatValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="8dp"
+                        android:text="-- kg" />
+
+                    <ImageButton
+                        android:id="@+id/btnWeightUp"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_add" />
+                </LinearLayout>
+
             </LinearLayout>
         </LinearLayout>
 
@@ -161,87 +185,87 @@
         android:id="@+id/llEditMode"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="16dp"
+        android:layout_marginBottom="24dp"
         android:orientation="vertical"
         android:visibility="gone"
-        android:layout_marginBottom="24dp"
         app:layout_constraintBottom_toTopOf="@+id/btnEditOrSave"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/ivProfilePicture">
 
         <EditText
             android:id="@+id/etNameEdit"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
             android:background="@drawable/bg_rounded_card"
             android:hint="Full Name"
             android:inputType="textPersonName"
-            android:layout_marginBottom="12dp"
             android:padding="16dp" />
 
         <EditText
             android:id="@+id/etPhoneEdit"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
             android:background="@drawable/bg_rounded_card"
             android:hint="Phone Number"
             android:inputType="phone"
-            android:layout_marginBottom="12dp"
             android:padding="16dp" />
 
         <EditText
             android:id="@+id/et_dob"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-
-            android:background="@drawable/bg_rounded_card"
-            android:padding="16dp"
             android:layout_marginBottom="12dp"
-
-            android:hint="Date of Birth"
-            android:focusable="false"
+            android:background="@drawable/bg_rounded_card"
             android:clickable="true"
-            android:cursorVisible="false" />
+            android:cursorVisible="false"
+            android:focusable="false"
+            android:hint="Date of Birth"
+            android:padding="16dp" />
 
         <com.google.android.material.textfield.TextInputLayout
             style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp" android:hint="Gender">
+            android:layout_marginBottom="12dp"
+            android:hint="Gender">
 
             <AutoCompleteTextView
                 android:id="@+id/et_gender"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="none" /> </com.google.android.material.textfield.TextInputLayout>
+                android:inputType="none" />
+        </com.google.android.material.textfield.TextInputLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:weightSum="2"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:weightSum="2">
 
             <EditText
                 android:id="@+id/etHeightEdit"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginEnd="6dp"
                 android:layout_weight="1"
                 android:background="@drawable/bg_rounded_card"
                 android:hint="Height (cm)"
                 android:inputType="numberDecimal"
-                android:layout_marginEnd="6dp"
                 android:padding="16dp" />
 
             <EditText
                 android:id="@+id/etWeightEdit"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
                 android:layout_weight="1"
                 android:background="@drawable/bg_rounded_card"
                 android:hint="Weight (kg)"
                 android:inputType="numberDecimal"
-                android:layout_marginStart="6dp"
                 android:padding="16dp" />
         </LinearLayout>
     </LinearLayout>
@@ -250,28 +274,28 @@
         android:id="@+id/btnEditOrSave"
         android:layout_width="0dp"
         android:layout_height="60dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:backgroundTint="@color/lion_fit_yellow"
         android:layout_marginBottom="16dp"
+        android:backgroundTint="@color/lion_fit_yellow"
         android:text="Edit Profile"
         android:textColor="@android:color/black"
         android:textStyle="bold"
         app:cornerRadius="12dp"
-        app:layout_constraintBottom_toTopOf="@+id/btnCancelOrLogout" />
+        app:layout_constraintBottom_toTopOf="@+id/btnCancelOrLogout"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
     <Button
         android:id="@+id/btnCancelOrLogout"
         android:layout_width="0dp"
         android:layout_height="56dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:backgroundTint="@color/save_button_black"
         android:layout_marginBottom="16dp"
+        android:backgroundTint="@color/save_button_black"
         android:text="Log Out"
         android:textColor="@android:color/white"
         android:textStyle="bold"
         app:cornerRadius="12dp"
-        app:layout_constraintBottom_toBottomOf="parent" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

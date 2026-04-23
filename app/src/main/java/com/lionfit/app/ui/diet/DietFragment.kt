@@ -1,4 +1,5 @@
 package com.lionfit.app.ui.diet
+
 import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -16,6 +17,8 @@ import com.lionfit.app.data.database.SupabaseManager
 import io.github.jan.supabase.gotrue.auth
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import com.lionfit.app.data.database.WaterDao
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.datepicker.CalendarConstraints
@@ -24,6 +27,9 @@ import com.google.android.material.datepicker.DayViewDecorator
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Parcel
+import com.lionfit.app.utils.Calculators
+import kotlinx.coroutines.flow.combine
+
 class DietFragment : Fragment(R.layout.fragment_diet) {
 
     private val db by lazy { AppDatabase.getDatabase(requireContext()) }
@@ -291,7 +297,8 @@ class DietFragment : Fragment(R.layout.fragment_diet) {
 
         val goalCalories = resources.getInteger(R.integer.goal_calories)
         progressGoal.progress = goalCalories
-        view.findViewById<TextView>(R.id.tvGoal).text = goalCalories.toString()
+        val tvGoal = view.findViewById<TextView>(R.id.tvGoal)
+        tvGoal.text = goalCalories.toString()
 
         val startOfDay = selectedDate.clone() as java.util.Calendar
         startOfDay.set(java.util.Calendar.HOUR_OF_DAY, 0)
@@ -306,35 +313,84 @@ class DietFragment : Fragment(R.layout.fragment_diet) {
         endOfDay.set(java.util.Calendar.MILLISECOND, 999)
 
         dietJob = lifecycleScope.launch {
-            // 1. ดึงข้อมูลจาก Cloud มาลง Local ก่อนเพื่อให้ข้อมูลไม่หาย
+            // ตั้งค่าเป้าหมายเริ่มต้นไว้ก่อน (กันเหนียว)
+            var dynamicGoal = resources.getInteger(R.integer.goal_calories)
+
+            // ดึงข้อมูลและคำนวณเป้าหมายจริง
+            withContext(Dispatchers.IO) {
+                try {
+                    val currentUser = SupabaseManager.client.auth.currentUserOrNull()
+                    if (currentUser != null) {
+                        val profile = SupabaseManager.getProfile(currentUser.id)
+                        if (profile != null) {
+                            val userWeight = if (profile.weightKg > 0) profile.weightKg else 70.0
+                            val height = if (profile.heightCm > 0) profile.heightCm else 170.0
+                            val age = Calculators.calculateAge(profile.birthDate)
+                            val gender = profile.gender ?: "male"
+
+                            val bmr = Calculators.calculateBMR(userWeight, height, age, gender)
+                            dynamicGoal = Calculators.calculateTDEE(bmr).toInt()
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+            // อัปเดต UI เป้าหมายวงกลม
+            tvGoal.text = String.format(java.util.Locale.getDefault(), "%,d", dynamicGoal)
+            progressGoal.max = dynamicGoal
+            progressGoal.progress = dynamicGoal
+
+            // 2. ดึงข้อมูลจาก Cloud มาลง Local ก่อนเพื่อให้ข้อมูลไม่หาย
             syncDataFromCloud(startOfDay.timeInMillis, endOfDay.timeInMillis)
 
-            // 2. Observe Food Logs จาก Local
+            // 3. Observe Food Logs จาก Local
+            // 3. Observe Food AND Run Logs to get the true Net Calories
             launch {
-                db.dietDao().getDietLogsForRange(startOfDay.timeInMillis, endOfDay.timeInMillis).collectLatest { logs ->
-                    val totalCals = logs.sumOf { it.calories }
-                    val goalCalories = resources.getInteger(R.integer.goal_calories)
+                val dietFlow = db.dietDao().getDietLogsForRange(startOfDay.timeInMillis, endOfDay.timeInMillis)
+                val runFlow = db.runDao().getAllRunsSortedByDate()
 
-                    tvEaten.text = totalCals.toString()
-                    
-                    if (totalCals > goalCalories) {
-                        val over = totalCals - goalCalories
-                        tvKcalLeft.text = over.toString()
+                dietFlow.combine(runFlow) { logs, runs ->
+                    val totalEaten = logs.sumOf { it.calories }
+                    val todayRuns = runs.filter { it.timestamp in startOfDay.timeInMillis..endOfDay.timeInMillis }
+                    val totalBurned = todayRuns.sumOf { it.caloriesBurned }
+
+                    val netCalories = totalEaten - totalBurned
+
+                    // Return all three pieces of data to the UI updater
+                    Triple(totalEaten, netCalories, logs)
+
+                }.collectLatest { (totalEaten, netCalories, logs) ->
+
+                    // "Eaten" UI still shows the raw food amount
+                    tvEaten.text = String.format(java.util.Locale.getDefault(), "%,d", totalEaten)
+                    progressEaten.max = dynamicGoal
+                    progressEaten.progress = totalEaten.coerceAtMost(dynamicGoal)
+
+                    // "Left / Over" UI uses the NET Calories
+                    if (netCalories > dynamicGoal) {
+                        // They are over their goal
+                        val over = netCalories - dynamicGoal
+                        tvKcalLeft.text = String.format(java.util.Locale.getDefault(), "%,d", over)
                         view.findViewById<TextView>(R.id.tvKcalLeftLabel)?.text = getString(R.string.label_kcal_over)
                         progressKcalLeft.setIndicatorColor(Color.RED)
+
+                        progressKcalLeft.max = dynamicGoal
+                        progressKcalLeft.progress = over.coerceAtMost(dynamicGoal)
+
                     } else {
-                        val kcalLeft = goalCalories - totalCals
-                        tvKcalLeft.text = kcalLeft.toString()
+                        // They have calories left to eat
+                        val kcalLeft = dynamicGoal - netCalories
+                        tvKcalLeft.text = String.format(java.util.Locale.getDefault(), "%,d", kcalLeft)
                         view.findViewById<TextView>(R.id.tvKcalLeftLabel)?.text = getString(R.string.label_kcal_left)
-                        progressKcalLeft.setIndicatorColor(Color.parseColor("#CDDC39"))
+                        progressKcalLeft.setIndicatorColor(Color.parseColor("#CDDC39")) // Greenish yellow
+
+                        progressKcalLeft.max = dynamicGoal
+                        progressKcalLeft.progress = kcalLeft.coerceAtMost(dynamicGoal)
                     }
 
-                    progressEaten.progress    = totalCals.coerceAtMost(goalCalories)
-                    progressKcalLeft.progress = if (totalCals > goalCalories) 
-                        (totalCals - goalCalories).coerceAtMost(goalCalories)
-                    else 
-                        (goalCalories - totalCals)
-
+                    // 3. Render the food lists below
                     renderMealItems(llBreakfast, logs.filter { it.mealType == "Breakfast" })
                     renderMealItems(llLunch,     logs.filter { it.mealType == "Lunch" })
                     renderMealItems(llDinner,    logs.filter { it.mealType == "Dinner" })
@@ -342,7 +398,7 @@ class DietFragment : Fragment(R.layout.fragment_diet) {
                 }
             }
 
-            // 3. Observe Water Logs จาก Local
+            // 4. Observe Water Logs จาก Local
             launch {
                 db.waterDao().getAllWaterLogs().collectLatest {
                     val totalWater = db.waterDao().getTotalWaterByDay(startOfDay.timeInMillis, endOfDay.timeInMillis) ?: 0

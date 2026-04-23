@@ -60,6 +60,8 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
     private lateinit var etHeightEdit: EditText
     private lateinit var etWeightEdit: EditText
     private lateinit var btnChangePic: Button
+    private lateinit var btnWeightUp: ImageButton
+    private lateinit var btnWeightDown: ImageButton
 
     // ViewModel
     private val sharedViewModel: SharedViewModel by activityViewModels()
@@ -126,6 +128,9 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
         btnEditOrSave = view.findViewById(R.id.btnEditOrSave)
         btnCancelOrLogout = view.findViewById(R.id.btnCancelOrLogout)
 
+        btnWeightUp = view.findViewById(R.id.btnWeightUp)
+        btnWeightDown = view.findViewById(R.id.btnWeightDown)
+
         val genderOptions = arrayOf("Male", "Female", "Other", "Prefer not to say")
         val dropdownAdapter = ArrayAdapter(
             requireContext(),
@@ -136,6 +141,10 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
     }
 
     private fun setupButtonListeners() {
+        // Weight up / down button
+        btnWeightUp.setOnClickListener { adjustWeight(0.5) }
+        btnWeightDown.setOnClickListener { adjustWeight(-0.5) }
+
         // Master button (toggles between "Edit Profile" and "Save")
         btnEditOrSave.setOnClickListener {
             if (!isEditing) {
@@ -298,6 +307,40 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
                 Toast.makeText(requireContext(), "Failed to save: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
             } finally {
                 btnEditOrSave.isEnabled = true // Re-enable button
+            }
+        }
+    }
+
+    /**
+     * Instantly updates the UI and silently syncs the new weight to Supabase.
+     */
+    private fun adjustWeight(delta: Double) {
+        // Safety check: Make sure we actually have a profile loaded
+        val profile = currentProfile ?: return
+
+        // Calculate new weight
+        val newWeight = Math.round((profile.weightKg + delta) * 10.0) / 10.0
+
+        // Prevent negative or zero weight
+        if (newWeight <= 0) return
+
+        // Optimistic UI Update
+        currentProfile = profile.copy(weightKg = newWeight)
+        tvWeightDisplay.text = "$newWeight kg"
+        etWeightEdit.setText(newWeight.toString()) // Keep the edit form in sync just in case they click Edit later
+
+        // Background Cloud Sync
+        lifecycleScope.launch {
+            try {
+                // Instantly save it to Supabase
+                SupabaseManager.updateProfile(currentProfile!!)
+
+            } catch (e: Exception) {
+                // If the internet fails, revert the UI back to the original safe weight
+                currentProfile = profile
+                tvWeightDisplay.text = "${profile.weightKg} kg"
+                etWeightEdit.setText(profile.weightKg.toString())
+                Toast.makeText(requireContext(), "No internet. Weight not saved.", Toast.LENGTH_SHORT).show()
             }
         }
     }
