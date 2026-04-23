@@ -12,7 +12,7 @@
     <string name="cd_scan">Scan barcode</string>
 
     <!-- Labels -->
-    <string name="calorie_for_today">Calorie for to day</string>
+    <string name="calorie_for_today">Today\'s Calories</string>
     <string name="label_eaten">eaten</string>
     <string name="label_kcal_left">kcal left</string>
     <string name="label_kcal_over">kcal over</string>

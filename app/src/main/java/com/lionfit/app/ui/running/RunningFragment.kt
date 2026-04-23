@@ -301,7 +301,8 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
             id = java.util.UUID.randomUUID().toString(),
             userId = SupabaseManager.client.auth.currentUserOrNull()?.id ?: "",
             // Randomize the start time between "right now" and "up to 3 days ago"
-            timestamp = System.currentTimeMillis() - Random.nextLong(0, 259200000),
+            timestamp = System.currentTimeMillis() ,
+            // - Random.nextLong(0, 259200000)
             durationInMillis = randomDurationMillis,
             distanceInKm = randomDistance,
             averagePace = randomPace,
@@ -485,7 +486,7 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
         // Set up the click actions
         btnConfirm.setOnClickListener {
             dialog.dismiss()
-            endRunAndNavigateToSave()
+            simulateFakeRun()
         }
 
         btnCancel.setOnClickListener {
