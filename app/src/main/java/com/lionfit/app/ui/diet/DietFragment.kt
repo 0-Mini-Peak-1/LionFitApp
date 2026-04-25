@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
-import com.lionfit.app.data.database.WaterDao
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.datepicker.CalendarConstraints
 import com.google.android.material.datepicker.DateValidatorPointBackward
@@ -29,12 +28,13 @@ import android.graphics.Color
 import android.os.Parcel
 import com.lionfit.app.utils.Calculators
 import kotlinx.coroutines.flow.combine
+import androidx.fragment.app.activityViewModels
+import com.lionfit.app.ui.shared.SharedViewModel
 
 class DietFragment : Fragment(R.layout.fragment_diet) {
 
     private val db by lazy { AppDatabase.getDatabase(requireContext()) }
-
-    private var currentWaterMl = 0
+    private val sharedViewModel: SharedViewModel by activityViewModels()
 
     private var selectedDate = java.util.Calendar.getInstance()
     private var isDateExplicitlySelected = false
@@ -74,11 +74,42 @@ class DietFragment : Fragment(R.layout.fragment_diet) {
             showDatePicker(view)
         }
 
+        // Listen to profile updated signal
+        sharedViewModel.profileUpdatedSignal.observe(viewLifecycleOwner) { timestamp ->
+            // If the timestamp is greater than 0, a new update just happened
+            if (timestamp > 0L) {
+                observeDietData(view) // Recalculate everything instantly
+            }
+        }
 
-        // ติดตามวันที่มีข้อมูลเพื่อเปิด/ปิดปุ่ม
+        // ติดตามวันที่มีข้อมูลเพื่อเปิด/ปิดปุ่ม (DIET + WATER)
         lifecycleScope.launch {
-            db.dietDao().getDatesWithLogs().collectLatest { dates ->
-                availableDates = dates.toSet()
+            val dietFlow = db.dietDao().getDatesWithLogs()
+            val waterFlow = db.waterDao().getAllWaterLogs() // Get all water logs
+
+            // Combine both databases into one master list of dates!
+            dietFlow.combine(waterFlow) { dietDates, waterLogs ->
+                val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+
+                // 1. Process Diet Dates
+                val dietSet = dietDates.map { dateStr ->
+                    try {
+                        val timestamp = dateStr.toLong()
+                        sdf.format(java.util.Date(timestamp))
+                    } catch (e: NumberFormatException) {
+                        dateStr
+                    }
+                }.toSet()
+
+                // 2. Process Water Dates
+                val waterSet = waterLogs.map { log ->
+                    sdf.format(java.util.Date(log.dateLogged))
+                }.toSet()
+
+                // 3. Merge them together!
+                dietSet + waterSet
+            }.collectLatest { combinedDates ->
+                availableDates = combinedDates
                 updateDateButtonsVisibility(view)
             }
         }
@@ -157,7 +188,6 @@ class DietFragment : Fragment(R.layout.fragment_diet) {
                 }
             }
         }
-
         observeDietData(view)
     }
 
@@ -189,26 +219,21 @@ class DietFragment : Fragment(R.layout.fragment_diet) {
 
         val datePicker = MaterialDatePicker.Builder.datePicker()
             .setTitleText("Select Date")
+            .setTheme(R.style.Theme_LionFit_DatePicker)
             .setSelection(utcSelection.timeInMillis)
             .setCalendarConstraints(constraintsBuilder.build())
             .setDayViewDecorator(object : DayViewDecorator() {
+                // Greyed out empty days
                 override fun getTextColor(
                     context: android.content.Context,
-                    year: Int,
-                    month: Int,
-                    day: Int,
-                    valid: Boolean,
-                    selected: Boolean
+                    year: Int, month: Int, day: Int,
+                    valid: Boolean, selected: Boolean
                 ): ColorStateList? {
                     if (!valid) return null
 
-                    val cal = java.util.Calendar.getInstance()
-                    cal.set(year, month, day)
-                    
-                    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
-                    val dateStr = sdf.format(cal.time)
+                    val cal = java.util.Calendar.getInstance().apply { set(year, month, day) }
+                    val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(cal.time)
 
-                    // วันที่มีข้อมูล หรือ วันนี้ หรือ วันที่กำลังเลือกอยู่
                     val isToday = isSameDay(cal, java.util.Calendar.getInstance())
                     val hasData = availableDates.contains(dateStr) || isToday
 
@@ -217,6 +242,40 @@ class DietFragment : Fragment(R.layout.fragment_diet) {
                     } else {
                         null
                     }
+                }
+
+                // Indicator dot
+                override fun getCompoundDrawableBottom(
+                    context: android.content.Context,
+                    year: Int, month: Int, day: Int,
+                    valid: Boolean, selected: Boolean
+                ): android.graphics.drawable.Drawable? {
+                    val cal = java.util.Calendar.getInstance().apply { set(year, month, day) }
+                    val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(cal.time)
+                    val isToday = isSameDay(cal, java.util.Calendar.getInstance())
+
+                    val hasData = availableDates.contains(dateStr) || isToday
+
+                    // If the day has data AND is not currently selected, draw the dot
+                    if (hasData && !selected) {
+                        val sizeDp = 6
+                        val size = (sizeDp * context.resources.displayMetrics.density).toInt()
+
+                        // Negative value shifts the dot UP towards the text
+                        val shiftDp = -5
+                        val shiftPixels = (shiftDp * context.resources.displayMetrics.density).toInt()
+
+                        val dot = android.graphics.drawable.GradientDrawable()
+                        dot.shape = android.graphics.drawable.GradientDrawable.OVAL
+                        dot.setColor(android.graphics.Color.parseColor("#FFC107")) // LionFit Yellow
+                        dot.setSize(size, size)
+
+                        // 🌟 Apply the shift to the Top and Bottom bounds
+                        dot.setBounds(0, shiftPixels, size, size + shiftPixels)
+
+                        return dot
+                    }
+                    return null
                 }
 
                 override fun describeContents(): Int = 0

@@ -6,8 +6,6 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.location.Location
-import android.os.Build
 import android.os.IBinder
 import android.os.Looper
 import androidx.core.app.NotificationCompat
@@ -24,6 +22,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
 import com.lionfit.app.R
+import android.widget.RemoteViews
+import android.app.PendingIntent
+import com.lionfit.app.MainActivity
+import java.util.Locale
 
 class TrackingService : Service() {
 
@@ -67,7 +69,7 @@ class TrackingService : Service() {
         notificationBuilder = NotificationCompat.Builder(this, "tracking_channel")
             .setAutoCancel(false)
             .setOngoing(true)
-            .setSmallIcon(R.drawable.ic_play)
+            .setSmallIcon(R.drawable.ic_notif_lion)
             .setContentTitle("LionFit")
             .setContentText("Tracking your run...")
     }
@@ -91,10 +93,6 @@ class TrackingService : Service() {
                         startForegroundService()
                         startLocationUpdates()
                         isFirstRun = false
-                    } else {
-                        notificationBuilder.setContentText("Tracking your run...")
-                        notificationBuilder.setSmallIcon(R.drawable.ic_play)
-                        notificationManager.notify(1, notificationBuilder.build())
                     }
                     addEmptyPolyline()
                     startTimer()
@@ -199,10 +197,8 @@ class TrackingService : Service() {
         // This instantly stops the coroutine while loop and saves the elapsed time
         isTracking.postValue(false)
         isTimerEnabled = false
-        notificationBuilder.setContentText("Running service paused")
-        notificationBuilder.setSmallIcon(R.drawable.ic_pause)
-        notificationManager.notify(1, notificationBuilder.build())
-
+        // Call custom notification
+        updateCustomNotification(isPaused = true)
     }
 
     private fun killService() {
@@ -242,6 +238,94 @@ class TrackingService : Service() {
                 timeRun += (System.currentTimeMillis() - timeStarted)
             }
         }
+
+        CoroutineScope(Dispatchers.Main).launch {
+            while (isTracking.value == true) {
+                updateCustomNotification(isPaused = false)
+                delay(1000L) // Wait 1 sec
+            }
+        }
+    }
+
+    // --- THE CUSTOM NOTIFICATION BUILDER ---
+    private fun updateCustomNotification(isPaused: Boolean) {
+        val timeMs = timeRunInMillis.value ?: 0L
+        val distanceKm = calculateTotalDistance()
+
+        val timeStr = formatTime(timeMs)
+        val distStr = String.format(Locale.getDefault(), "%.2f", distanceKm)
+        val paceStr = formatPace(distanceKm, timeMs)
+
+        // The tap action to open the Run tab
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("OPEN_FRAGMENT", "run")
+        }
+
+        val pendingIntent = PendingIntent.getActivity(
+            this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        // Bind to the XML layout
+        val remoteViews = RemoteViews(packageName, R.layout.layout_notification_run).apply {
+            setTextViewText(R.id.notif_time, timeStr)
+            setTextViewText(R.id.notif_distance, "$distStr km")
+            setTextViewText(R.id.notif_pace, paceStr)
+
+            if (isPaused) {
+                setTextViewText(R.id.notif_title, "Paused")
+                setTextColor(R.id.notif_title, android.graphics.Color.parseColor("#E57373")) // Red
+            } else {
+                setTextViewText(R.id.notif_title, "Running...")
+                setTextColor(R.id.notif_title, android.graphics.Color.parseColor("#81C784")) // Green
+            }
+        }
+
+        // Apply it to the global builder and trigger it
+        notificationBuilder.setContent(remoteViews)
+        notificationBuilder.setContentIntent(pendingIntent)
+        notificationBuilder.setStyle(NotificationCompat.DecoratedCustomViewStyle())
+
+        notificationManager.notify(1, notificationBuilder.build())
+    }
+
+    // --- NOTIFICATION HELPER MATH ---
+    private fun calculateTotalDistance(): Float {
+        var distance = 0f
+        pathPoints.value?.let { points ->
+            for (polyline in points) {
+                for (i in 0 until polyline.size - 1) {
+                    val pos1 = polyline[i]
+                    val pos2 = polyline[i + 1]
+                    val result = FloatArray(1)
+                    android.location.Location.distanceBetween(
+                        pos1.latitude, pos1.longitude,
+                        pos2.latitude, pos2.longitude,
+                        result
+                    )
+                    distance += result[0]
+                }
+            }
+        }
+        return distance / 1000f // Convert meters to km
+    }
+
+    private fun formatTime(ms: Long): String {
+        val totalSeconds = ms / 1000
+        val h = totalSeconds / 3600
+        val m = (totalSeconds % 3600) / 60
+        val s = totalSeconds % 60
+        return if (h > 0) String.format(Locale.getDefault(), "%02d:%02d:%02d", h, m, s)
+        else String.format(Locale.getDefault(), "%02d:%02d", m, s)
+    }
+
+    private fun formatPace(distanceKm: Float, timeMs: Long): String {
+        if (distanceKm < 0.01f || timeMs == 0L) return "--:--"
+        val timeMinutes = timeMs / 60000.0
+        val paceMinPerKm = timeMinutes / distanceKm
+        val paceMin = paceMinPerKm.toInt()
+        val paceSec = ((paceMinPerKm - paceMin) * 60).toInt()
+        return String.format(Locale.getDefault(), "%d:%02d", paceMin, paceSec)
     }
 
     private fun startForegroundService() {

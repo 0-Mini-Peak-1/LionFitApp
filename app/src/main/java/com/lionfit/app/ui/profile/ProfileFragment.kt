@@ -24,9 +24,9 @@ import io.github.jan.supabase.gotrue.auth
 import androidx.fragment.app.activityViewModels
 import coil.load
 import com.lionfit.app.ui.shared.SharedViewModel
-import android.app.DatePickerDialog
-import java.util.Calendar
-import java.util.Locale
+import com.google.android.material.datepicker.MaterialDatePicker
+import com.google.android.material.datepicker.CalendarConstraints
+import com.google.android.material.datepicker.DateValidatorPointBackward
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
 
@@ -174,47 +174,34 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
         }
 
         etBirthDateEdit.setOnClickListener {
-            val calendar = Calendar.getInstance()
-            val currentDobText = etBirthDateEdit.text.toString().trim()
+            // Prevent them from picking a birthdate in the future
+            val constraintsBuilder = CalendarConstraints.Builder()
+                .setValidator(DateValidatorPointBackward.now())
 
-            // Check if they already have a date saved
-            if (currentDobText.isNotEmpty() && currentDobText.contains("-")) {
-                try {
-                    // Split "1995-08-24" into [1995, 08, 24]
-                    val parts = currentDobText.split("-")
-                    if (parts.size == 3) {
-                        val parsedYear = parts[0].toInt()
-                        val parsedMonth = parts[1].toInt() - 1 // Calendar months are 0-indexed (Jan = 0)
-                        val parsedDay = parts[2].toInt()
+            // Build the LionFit Branded Picker
+            val datePicker = MaterialDatePicker.Builder.datePicker()
+                .setTitleText("Select Date of Birth")
+                .setTheme(R.style.Theme_LionFit_DatePicker)
+                .setCalendarConstraints(constraintsBuilder.build())
+                .build()
 
-                        // Set the calendar to the user's saved date
-                        calendar.set(parsedYear, parsedMonth, parsedDay)
-                    }
-                } catch (e: Exception) {
-                    // If the text was weirdly formatted, just fallback to 20 years ago
-                    calendar.add(Calendar.YEAR, -20)
-                }
-            } else {
-                // If the field is totally empty, default to 20 years ago
-                calendar.add(Calendar.YEAR, -20)
+            // Handle the result
+            datePicker.addOnPositiveButtonClickListener { selection ->
+                // Convert UTC selection to the PostgreSQL format (YYYY-MM-DD)
+                val utcCal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
+                utcCal.timeInMillis = selection
+
+                val formattedDate = String.format(
+                    java.util.Locale.getDefault(),
+                    "%04d-%02d-%02d",
+                    utcCal.get(java.util.Calendar.YEAR),
+                    utcCal.get(java.util.Calendar.MONTH) + 1, // Calendar months are 0-indexed
+                    utcCal.get(java.util.Calendar.DAY_OF_MONTH)
+                )
+                etBirthDateEdit.setText(formattedDate)
             }
 
-            val year = calendar.get(Calendar.YEAR)
-            val month = calendar.get(Calendar.MONTH)
-            val day = calendar.get(Calendar.DAY_OF_MONTH)
-
-            val datePickerDialog = DatePickerDialog(
-                requireContext(),
-                { _, selectedYear, selectedMonth, selectedDay ->
-                    // Keep the PostgreSQL standard format
-                    val formattedDate = String.format(Locale.getDefault(), "%04d-%02d-%02d", selectedYear, selectedMonth + 1, selectedDay)
-                    etBirthDateEdit.setText(formattedDate)
-                },
-                year, month, day
-            )
-
-            datePickerDialog.datePicker.maxDate = System.currentTimeMillis()
-            datePickerDialog.show()
+            datePicker.show(parentFragmentManager, "BIRTHDATE_PICKER")
         }
     }
 
@@ -301,6 +288,7 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
                 toggleEditingMode(false) // Toggle back to display mode
                 newProfilePictureBytes = null // Reset the pending image
                 sharedViewModel.updatedProfilePicUrl.value = finalPicUrl
+                sharedViewModel.profileUpdatedSignal.postValue(System.currentTimeMillis())
 
                 Toast.makeText(requireContext(), "Profile Updated!", Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
@@ -334,6 +322,8 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
             try {
                 // Instantly save it to Supabase
                 SupabaseManager.updateProfile(currentProfile!!)
+                // Tell the rest of the app that weight is officially saved
+                sharedViewModel.profileUpdatedSignal.postValue(System.currentTimeMillis())
 
             } catch (e: Exception) {
                 // If the internet fails, revert the UI back to the original safe weight

@@ -22,13 +22,14 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.LionFitApp">
 
+<!-- No landscape mode in anytime soon!  -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.MaterialComponents.Light.NoActionBar">
+            android:screenOrientation="portrait" android:theme="@style/Theme.MaterialComponents.Light.NoActionBar">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
+                <action android:name="android.intent.action.MAIN" />-
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>

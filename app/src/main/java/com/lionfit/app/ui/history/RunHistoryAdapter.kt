@@ -19,6 +19,7 @@ class RunHistoryAdapter(
     private val onRunClicked: (RunSession) -> Unit
 ) :
     RecyclerView.Adapter<RunHistoryAdapter.RunViewHolder>() {
+    private val sdf = SimpleDateFormat("dd/MM/yyyy 'at' hh:mm a", Locale.getDefault())
 
     inner class RunViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val tvTitle: TextView = itemView.findViewById(R.id.tv_run_title)
@@ -29,6 +30,7 @@ class RunHistoryAdapter(
         val tvCalories: TextView = itemView.findViewById(R.id.tv_run_calories)
         val ivMapSnapshot: ImageView = itemView.findViewById(R.id.iv_run_map_snapshot)
     }
+
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RunViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_run_history, parent, false)
@@ -59,7 +61,6 @@ class RunHistoryAdapter(
         holder.tvCalories.text = run.caloriesBurned.toString()
 
         // Format Date (Timestamp to Readable String)
-        val sdf = SimpleDateFormat("dd/MM/yyyy 'at' hh:mm a", Locale.getDefault())
         holder.tvDate.text = sdf.format(Date(run.timestamp))
 
         if (run.mapSnapshotUrl != null) {

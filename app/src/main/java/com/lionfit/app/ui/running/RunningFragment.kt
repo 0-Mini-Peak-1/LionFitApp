@@ -170,6 +170,24 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
         layoutLockContainerExpanded = view.findViewById(R.id.layout_lock_container_expanded)
         viewLockCircleExpanded = view.findViewById(R.id.view_lock_circle_expanded)
 
+        // Intercept back button
+        val backCallback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                // Check your actual lock variable here (e.g., isLocked, isScreenLocked, etc.)
+                if (isScreenLocked) {
+                    // The screen is locked! Block the back button and tell the user.
+                    Toast.makeText(requireContext(), "Please unlock the screen to exit!", Toast.LENGTH_SHORT).show()
+                } else {
+                    // The screen is unlocked. Let them go back normally.
+                    isEnabled = false // Turn off our custom rule
+                    requireActivity().onBackPressedDispatcher.onBackPressed() // Trigger normal back
+                }
+            }
+        }
+        // Call interceptor
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backCallback)
+
+
         // Initialize Map
         Configuration.getInstance().userAgentValue = requireContext().packageName
         map = view.findViewById(R.id.map)
@@ -486,7 +504,7 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
         // Set up the click actions
         btnConfirm.setOnClickListener {
             dialog.dismiss()
-            simulateFakeRun()
+            endRunAndNavigateToSave()
         }
 
         btnCancel.setOnClickListener {
