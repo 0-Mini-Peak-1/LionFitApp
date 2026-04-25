@@ -21,6 +21,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import android.app.DatePickerDialog
+import com.google.android.material.datepicker.CalendarConstraints
+import com.google.android.material.datepicker.DateValidatorPointBackward
+import com.google.android.material.datepicker.MaterialDatePicker
 import java.util.Calendar
 import java.util.Locale
 
@@ -62,24 +65,34 @@ class AuthFragment : Fragment(R.layout.fragment_auth) {
 
         // Date of birth field
         etSignupDob.setOnClickListener {
-            val calendar = Calendar.getInstance()
-            val year = calendar.get(Calendar.YEAR)
-            val month = calendar.get(Calendar.MONTH)
-            val day = calendar.get(Calendar.DAY_OF_MONTH)
+            // Prevent them from picking a birthdate in the future
+            val constraintsBuilder = CalendarConstraints.Builder()
+                .setValidator(DateValidatorPointBackward.now())
 
-            val datePickerDialog = DatePickerDialog(
-                requireContext(),
-                { _, selectedYear, selectedMonth, selectedDay ->
-                    // The PostgreSQL standard format (YYYY-MM-DD):
-                    val formattedDate = String.format(Locale.getDefault(), "%04d-%02d-%02d", selectedYear, selectedMonth + 1, selectedDay)
-                    etSignupDob.setText(formattedDate)
-                },
-                year, month, day
-            )
+            // Build the LionFit Branded Picker
+            val datePicker = MaterialDatePicker.Builder.datePicker()
+                .setTitleText("Select Date of Birth")
+                .setTheme(R.style.Theme_LionFit_DatePicker)
+                .setCalendarConstraints(constraintsBuilder.build())
+                .build()
 
-            // Prevent future dates
-            datePickerDialog.datePicker.maxDate = System.currentTimeMillis()
-            datePickerDialog.show()
+            // Handle the result
+            datePicker.addOnPositiveButtonClickListener { selection ->
+                // Convert UTC selection to the PostgreSQL format (YYYY-MM-DD)
+                val utcCal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
+                utcCal.timeInMillis = selection
+
+                val formattedDate = String.format(
+                    java.util.Locale.getDefault(),
+                    "%04d-%02d-%02d",
+                    utcCal.get(java.util.Calendar.YEAR),
+                    utcCal.get(java.util.Calendar.MONTH) + 1, // Calendar months are 0-indexed
+                    utcCal.get(java.util.Calendar.DAY_OF_MONTH)
+                )
+                etSignupDob.setText(formattedDate)
+            }
+
+            datePicker.show(parentFragmentManager, "BIRTHDATE_PICKER")
         }
 
         btnSubmit.setOnClickListener {

@@ -1,5 +1,6 @@
 package com.lionfit.app
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
@@ -113,6 +114,21 @@ class MainActivity : AppCompatActivity() {
         topProfileBtn.setOnClickListener {
             switchFragment("profile")
             bottomNav.selectedItemId = R.id.nav_profile
+        }
+
+        handleIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        val targetFragment = intent?.getStringExtra("OPEN_FRAGMENT")
+        if (targetFragment == "running") {
+            // Navigate directly to the tracking screen
+            switchFragment("running")
         }
     }
 

@@ -36,4 +36,13 @@
     <style name="ShapeAppearanceOverlay.LionFit.Dialog.Rounded" parent="">
         <item name="cornerSize">24dp</item>
     </style>
+
+<!--    Date picker theme   -->
+    <style name="Theme.LionFit.DatePicker" parent="ThemeOverlay.MaterialComponents.MaterialCalendar">
+        <item name="colorPrimary">#FFC107</item>
+
+        <item name="colorOnPrimary">#000000</item>
+
+        <item name="colorPrimaryVariant">#FFC107</item>
+    </style>
 </resources>

@@ -30,6 +30,8 @@ import kotlinx.coroutines.flow.combine
 import com.lionfit.app.utils.Calculators
 import androidx.viewpager2.widget.ViewPager2
 import kotlinx.coroutines.delay
+import androidx.fragment.app.activityViewModels
+import com.lionfit.app.ui.shared.SharedViewModel
 
 /**
  * Fragment สำหรับแสดงหน้า Dashboard หลักของแอปพลิเคชัน
@@ -38,6 +40,7 @@ import kotlinx.coroutines.delay
 class DashboardFragment : Fragment() {
 
     private val dashboardSleepRecords = androidx.compose.runtime.mutableStateListOf<com.lionfit.app.data.model.SleepRecord>()
+    private val sharedViewModel: SharedViewModel by activityViewModels()
     // เชื่อมต่อกับฐานข้อมูล Room
     private val db by lazy { AppDatabase.getDatabase(requireContext()) }
 
@@ -59,6 +62,7 @@ class DashboardFragment : Fragment() {
         observeRunData(view)
         observeSleepData(view)
 
+        // Swipe to refresh
         val swipeRefreshLayout = view.findViewById<androidx.swiperefreshlayout.widget.SwipeRefreshLayout>(R.id.swipeRefreshLayout)
         swipeRefreshLayout.setOnRefreshListener {
             // เมื่อดึงลงมา ให้สั่งโหลดข้อมูลใหม่ทั้งหมด
@@ -68,6 +72,16 @@ class DashboardFragment : Fragment() {
 
             // ปิดตัวหมุนรีเฟรชเมื่อทำงานเสร็จ (ในกรณีนี้คำสั่งทำงานเร็วมาก สามารถสั่งปิดได้เลย)
             swipeRefreshLayout.isRefreshing = false
+        }
+
+        // Listen for profile changes
+        sharedViewModel.profileUpdatedSignal.observe(viewLifecycleOwner) { timestamp ->
+            // If the timestamp is greater than 0, a new update just happened
+            if (timestamp > 0L) {
+                observeDietData(view)
+                observeRunData(view)
+                observeSleepData(view)
+            }
         }
     }
 
@@ -271,7 +285,10 @@ class DashboardFragment : Fragment() {
         val cardLastRun = view.findViewById<com.google.android.material.card.MaterialCardView>(R.id.cardLastRun)
 
         cardLastRun.setOnClickListener {
-            (requireActivity() as MainActivity).switchFragment("run_history",true)
+            viewLifecycleOwner.lifecycleScope.launch {
+                delay(200)
+                (requireActivity() as MainActivity).switchFragment("run_history", true)
+            }
         }
 
         // 1. ให้ UI เฝ้ามองการวิ่งล่าสุดจาก Room (อัปเดตทันทีที่กลับมาจาก SaveActivity)
@@ -325,10 +342,17 @@ class DashboardFragment : Fragment() {
         val tvHours = view.findViewById<TextView>(R.id.tvSleepAvgHours)
         val tvMins = view.findViewById<TextView>(R.id.tvSleepAvgMins)
         val cardSleep = view.findViewById<com.google.android.material.card.MaterialCardView>(R.id.cardSleep)
+        val sleepShield = view.findViewById<View>(R.id.viewSleepShield)
 
-        cardSleep?.setOnClickListener {
-            (requireActivity() as MainActivity).switchFragment("sleep")
+        val navigateToSleep = {
+            viewLifecycleOwner.lifecycleScope.launch {
+                delay(200)
+                (requireActivity() as MainActivity).switchFragment("sleep")
+            }
         }
+
+        cardSleep?.setOnClickListener { navigateToSleep() }
+        sleepShield?.setOnClickListener { navigateToSleep() }
 
         val composeView = view.findViewById<androidx.compose.ui.platform.ComposeView>(R.id.dashboard_sleep_chart)
         composeView.setContent {
@@ -356,9 +380,26 @@ class DashboardFragment : Fragment() {
 
                     tvHours.text = hours.toString()
                     tvMins.text = minutes.toString()
+
+                    val tvSleepFeedback = view.findViewById<TextView>(R.id.tvSleepFeedback)
+                    if (avgTotalHours < 6.0) {
+                        tvSleepFeedback?.text = "Low sleep detected. Prioritize rest tonight to avoid muscle fatigue!"
+                        tvSleepFeedback?.setTextColor(android.graphics.Color.parseColor("#E57373")) // Soft Red
+                    } else if (avgTotalHours in 6.0..8.0) {
+                        tvSleepFeedback?.text = "Perfect sleep average! Your body is primed for running."
+                        tvSleepFeedback?.setTextColor(android.graphics.Color.parseColor("#81C784")) // Soft Green
+                    } else {
+                        tvSleepFeedback?.text = "Great recovery time! You are well-rested."
+                        tvSleepFeedback?.setTextColor(android.graphics.Color.parseColor("#64B5F6")) // Soft Blue
+                    }
                 } else {
                     tvHours.text = "0"
                     tvMins.text = "0"
+
+                    // Reset suggestion text
+                    val tvSleepFeedback = view.findViewById<TextView>(R.id.tvSleepFeedback)
+                    tvSleepFeedback?.text = "Log your sleep tonight to get recovery insights!"
+                    tvSleepFeedback?.setTextColor(android.graphics.Color.parseColor("#9E9E9E"))
                 }
             }
         }

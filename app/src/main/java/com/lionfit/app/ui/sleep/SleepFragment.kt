@@ -1,7 +1,6 @@
 package com.lionfit.app.ui.sleep
 
 import android.annotation.SuppressLint
-import android.app.DatePickerDialog
 import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
@@ -37,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog as ComposeDialog
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.datepicker.MaterialDatePicker
 import com.lionfit.app.R
 import com.lionfit.app.data.database.AppDatabase
 import com.lionfit.app.data.database.SupabaseManager
@@ -51,6 +51,9 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 import java.util.UUID
+import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.datepicker.CalendarConstraints
+import com.google.android.material.datepicker.DateValidatorPointBackward
 
 val SleepBarColor = ComposeColor(0xFFBDA7EF)
 val SelectedSleepBarColor = ComposeColor(0xFF916CD5)
@@ -154,13 +157,27 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
         }
 
         view.findViewById<ImageButton>(R.id.btn_info)?.setOnClickListener { showInfoDialog() }
-        
+
         view.findViewById<TextView>(R.id.tv_date_range)?.setOnClickListener {
-            val picker = DatePickerDialog(requireContext(), { _, y, m, d ->
-                val selectedDate = LocalDate.of(y, m + 1, d)
+            val datePicker = MaterialDatePicker.Builder.datePicker()
+                .setTitleText("Select Week")
+                .setTheme(R.style.Theme_LionFit_DatePicker)
+                .build()
+
+            datePicker.addOnPositiveButtonClickListener { selection ->
+                val utcCal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
+                utcCal.timeInMillis = selection
+
+                // Update your Compose state variable!
+                val selectedDate = LocalDate.of(
+                    utcCal.get(java.util.Calendar.YEAR),
+                    utcCal.get(java.util.Calendar.MONTH) + 1,
+                    utcCal.get(java.util.Calendar.DAY_OF_MONTH)
+                )
                 currentWeekStart = selectedDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY))
-            }, currentWeekStart.year, currentWeekStart.monthValue - 1, currentWeekStart.dayOfMonth)
-            picker.show()
+            }
+
+            datePicker.show(parentFragmentManager, "WEEK_PICKER")
         }
     }
 
@@ -227,7 +244,21 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
         if (userId.isEmpty()) return
         val startDT = startDate.atTime(startTime)
         var endDT = startDate.atTime(endTime)
+
+        // Handles overnight sleep
         if (endTime.isBefore(startTime)) endDT = endDT.plusDays(1)
+
+        // Prevent time traveler
+        val currentDateTime = LocalDateTime.now()
+        if (endDT.isAfter(currentDateTime)) {
+            // They are trying to log a wake-up time that hasn't happened yet!
+            Toast.makeText(
+                requireContext(),
+                "You cannot save sleep that hasn't finished yet",
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
 
         val duration = Duration.between(startDT, endDT)
         val totalHours = duration.toMinutes() / 60.0
@@ -280,28 +311,26 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
         val weekStartMillis = startOfWeek.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
         val weekEndMillis = endOfWeek.atTime(LocalTime.MAX).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
+        // Filter only records that belong to this week
         val recordsInWeek = records.filter {
             it.bedTimeInMillis < weekEndMillis && it.wakeTimeInMillis > weekStartMillis
         }
 
+        // Count how many unique days they actually logged sleep
         val activeDaysCount = recordsInWeek.map { record ->
             LocalDateTime.ofInstant(Instant.ofEpochMilli(record.bedTimeInMillis), ZoneId.systemDefault()).toLocalDate()
         }.distinct().size
 
-        var totalMinutesInWeek = 0L
-        recordsInWeek.forEach { record ->
-            val actualStart = maxOf(record.bedTimeInMillis, weekStartMillis)
-            val actualEnd = minOf(record.wakeTimeInMillis, weekEndMillis)
-            if (actualStart < actualEnd) {
-                totalMinutesInWeek += (actualEnd - actualStart) / (1000 * 60)
-            }
-        }
+        // Use ONLY the 'totalHoursSlept' property
+        val totalMinutesInWeek = recordsInWeek.sumOf { (it.totalHoursSlept * 60).toLong() }
 
-        val avgTotalMinutes = if (activeDaysCount > 0) totalMinutesInWeek / activeDaysCount else 0
+        // Calculate the true average
+        val avgTotalMinutes = if (activeDaysCount > 0) totalMinutesInWeek / activeDaysCount else 0L
 
+        // Update the UI
         rootView.findViewById<TextView>(R.id.tv_avg_hours)?.text = (avgTotalMinutes / 60).toString()
         rootView.findViewById<TextView>(R.id.tv_avg_minutes)?.text = (avgTotalMinutes % 60).toString()
-        rootView.findViewById<TextView>(R.id.tv_date_range)?.text = 
+        rootView.findViewById<TextView>(R.id.tv_date_range)?.text =
             "${startOfWeek.format(DateTimeFormatter.ofPattern("dd"))} - ${endOfWeek.format(DateTimeFormatter.ofPattern("dd MMM yyyy"))}"
     }
 
@@ -407,7 +436,29 @@ class SleepFragment : Fragment(R.layout.fragment_sleeping) {
         if (showDatePicker) {
             val ctx = requireContext()
             SideEffect {
-                DatePickerDialog(ctx, { _, y, m, d -> startDate = LocalDate.of(y, m + 1, d); showDatePicker = false }, startDate.year, startDate.monthValue - 1, startDate.dayOfMonth).show()
+                val datePicker = MaterialDatePicker.Builder.datePicker()
+                    .setTitleText("Select Sleep Date")
+                    .setTheme(R.style.Theme_LionFit_DatePicker)
+                    // Prevent picking future dates for sleep
+                    .setCalendarConstraints(CalendarConstraints.Builder().setValidator(
+                        DateValidatorPointBackward.now()).build())
+                    .build()
+
+                datePicker.addOnPositiveButtonClickListener { selection ->
+                    val utcCal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
+                    utcCal.timeInMillis = selection
+                    startDate = LocalDate.of(
+                        utcCal.get(java.util.Calendar.YEAR),
+                        utcCal.get(java.util.Calendar.MONTH) + 1,
+                        utcCal.get(java.util.Calendar.DAY_OF_MONTH)
+                    )
+                    showDatePicker = false
+                }
+
+                datePicker.addOnDismissListener { showDatePicker = false }
+
+                // Launch the fragment from inside Compose
+                datePicker.show((ctx as AppCompatActivity).supportFragmentManager, "SLEEP_DATE_PICKER")
             }
         }
     }
