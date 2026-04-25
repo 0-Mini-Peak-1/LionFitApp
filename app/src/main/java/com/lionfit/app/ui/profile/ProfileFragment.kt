@@ -29,6 +29,8 @@ import com.google.android.material.datepicker.CalendarConstraints
 import com.google.android.material.datepicker.DateValidatorPointBackward
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
@@ -337,13 +339,25 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
     private fun handleLogOut() {
         lifecycleScope.launch {
-            SupabaseManager.logOutUser() // Sign out of the session
+            try {
+                val db = com.lionfit.app.data.database.AppDatabase.getDatabase(requireContext())
+                db.clearAllTables() // Nuke the local database
 
-            // Navigate the user back to the Auth screen by killing MainActivity and starting clean
-            val intent = Intent(requireActivity(), MainActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            startActivity(intent)
-            requireActivity().finish() // Kill the current MainActivity instance
+                SupabaseManager.logOutUser() // Sign out of the cloud session
+
+                // Navigate the user back to the Auth screen by killing MainActivity and starting clean
+                withContext(Dispatchers.Main) {
+                    val intent = Intent(requireActivity(), MainActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                    startActivity(intent)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                // Switch to Main Thread to show the Toast safely
+                withContext(Dispatchers.Main) {
+                    android.widget.Toast.makeText(requireContext(), "Logout failed: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
