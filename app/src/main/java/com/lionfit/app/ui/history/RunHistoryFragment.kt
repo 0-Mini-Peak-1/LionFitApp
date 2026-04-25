@@ -26,6 +26,7 @@ import androidx.core.content.FileProvider
 import coil.ImageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
+import com.google.android.material.button.MaterialButtonToggleGroup
 import java.io.File
 import java.io.FileOutputStream
 
@@ -33,6 +34,8 @@ class RunHistoryFragment : Fragment(R.layout.fragment_run_history) {
 
     private lateinit var runHistoryAdapter: RunHistoryAdapter
     private var swipeRefreshLayout: SwipeRefreshLayout? = null
+    private var allRuns = listOf<RunSession>()
+    private var currentFilterId = R.id.btnFilterAll
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -44,29 +47,29 @@ class RunHistoryFragment : Fragment(R.layout.fragment_run_history) {
             (requireActivity() as MainActivity).switchFragment("running")
         }
 
+        // Set up the Filter Buttons
+        val toggleGroup = view.findViewById<MaterialButtonToggleGroup>(R.id.toggleFilterGroup)
+        toggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (isChecked) {
+                currentFilterId = checkedId
+                applyFilterAndUpdateUI()
+            }
+        }
+
         // Set up the RecyclerView
         val recyclerView = view.findViewById<RecyclerView>(R.id.rv_run_history)
         runHistoryAdapter = RunHistoryAdapter(emptyList()) { clickedRun ->
             // Open the Bottom Sheet
             val bottomSheet = RunDetailBottomSheet(
                 runSession = clickedRun,
-                onEditClicked = { runToEdit ->
-                    showEditTitleDialog(runToEdit)
-                },
-                onShareClicked = { runToShare ->
-                    shareRunDetails(runToShare)
-                },
-                onDeleteClicked = { runToDelete ->
-                    showDeleteConfirmationDialog(runToDelete)
-                }
+                onEditClicked = { runToEdit -> showEditTitleDialog(runToEdit) },
+                onShareClicked = { runToShare -> shareRunDetails(runToShare) },
+                onDeleteClicked = { runToDelete -> showDeleteConfirmationDialog(runToDelete) }
             )
-
-            // This single line makes it slide up from the bottom!
             bottomSheet.show(parentFragmentManager, "RunDetailSheet")
         }
         recyclerView.adapter = runHistoryAdapter
-        recyclerView.layoutManager =
-            LinearLayoutManager(requireContext()) // Makes it a vertical list
+        recyclerView.layoutManager = LinearLayoutManager(requireContext())
 
         // Swipe to refresh
         swipeRefreshLayout = view.findViewById(R.id.swipe_refresh_layout)
@@ -97,20 +100,10 @@ class RunHistoryFragment : Fragment(R.layout.fragment_run_history) {
 
                     // Switch back to Main thread to update the UI
                     withContext(Dispatchers.Main) {
-                        // Find the views
-                        val emptyState = view?.findViewById<View>(R.id.layout_empty_state)
-                        val recyclerView = view?.findViewById<View>(R.id.rv_run_history)
+                        // 🌟 Instead of applying to the adapter directly, save to master list and filter!
+                        allRuns = userRuns
+                        applyFilterAndUpdateUI()
 
-                        if (userRuns.isEmpty()) {
-                            emptyState?.visibility = View.VISIBLE
-                            recyclerView?.visibility = View.GONE
-                        } else {
-                            emptyState?.visibility = View.GONE
-                            recyclerView?.visibility = View.VISIBLE
-
-                            runHistoryAdapter.submitList(userRuns)
-                        }
-                        // Turn off the loading spinner
                         swipeRefreshLayout?.isRefreshing = false
                     }
                 }
@@ -122,6 +115,87 @@ class RunHistoryFragment : Fragment(R.layout.fragment_run_history) {
                 }
             }
         }
+    }
+
+    // The brains of the Dashboard
+    private fun applyFilterAndUpdateUI() {
+        val currentView = view ?: return
+        val now = java.util.Calendar.getInstance()
+        val currentYear = now.get(java.util.Calendar.YEAR)
+        val currentMonth = now.get(java.util.Calendar.MONTH)
+        val currentWeek = now.get(java.util.Calendar.WEEK_OF_YEAR)
+
+        var filteredTitle = "All Time Summary"
+
+        // FILTER THE DATA
+        val filteredRuns = allRuns.filter { run ->
+            val runCal = java.util.Calendar.getInstance().apply { timeInMillis = run.timestamp }
+
+            when (currentFilterId) {
+                R.id.btnFilterYear -> {
+                    filteredTitle = "This Year's Summary"
+                    runCal.get(java.util.Calendar.YEAR) == currentYear
+                }
+                R.id.btnFilterMonth -> {
+                    filteredTitle = "This Month's Summary"
+                    runCal.get(java.util.Calendar.YEAR) == currentYear &&
+                            runCal.get(java.util.Calendar.MONTH) == currentMonth
+                }
+                R.id.btnFilterWeek -> {
+                    filteredTitle = "This Week's Summary"
+                    runCal.get(java.util.Calendar.YEAR) == currentYear &&
+                            runCal.get(java.util.Calendar.WEEK_OF_YEAR) == currentWeek
+                }
+                else -> { // btnFilterAll
+                    filteredTitle = "All Time Summary"
+                    true
+                }
+            }
+        }
+
+        // CRUNCH THE MATH
+        val totalDistance = filteredRuns.sumOf { it.distanceInKm }.toFloat()
+        val totalTimeMs = filteredRuns.sumOf { it.durationInMillis }
+        val totalRuns = filteredRuns.size
+
+        // UPDATE THE SUMMARY CARD UI
+        currentView.findViewById<TextView>(R.id.tvSummaryTitle).text = filteredTitle
+        currentView.findViewById<TextView>(R.id.tvSumRuns).text = totalRuns.toString()
+        currentView.findViewById<TextView>(R.id.tvSumDistance).text = String.format(java.util.Locale.getDefault(), "%.2f km", totalDistance)
+        currentView.findViewById<TextView>(R.id.tvSumTime).text = formatTime(totalTimeMs)
+        currentView.findViewById<TextView>(R.id.tvSumPace).text = formatPace(totalDistance, totalTimeMs)
+
+        // UPDATE RECYCLER VIEW AND EMPTY STATE
+        val emptyState = currentView.findViewById<View>(R.id.layout_empty_state)
+        val recyclerView = currentView.findViewById<View>(R.id.rv_run_history)
+
+        if (filteredRuns.isEmpty()) {
+            emptyState?.visibility = View.VISIBLE
+            recyclerView?.visibility = View.GONE
+        } else {
+            emptyState?.visibility = View.GONE
+            recyclerView?.visibility = View.VISIBLE
+            runHistoryAdapter.submitList(filteredRuns)
+        }
+    }
+
+    // Math helpers:
+    private fun formatTime(ms: Long): String {
+        val totalSeconds = ms / 1000
+        val h = totalSeconds / 3600
+        val m = (totalSeconds % 3600) / 60
+        val s = totalSeconds % 60
+        return if (h > 0) String.format(java.util.Locale.getDefault(), "%02d:%02d:%02d", h, m, s)
+        else String.format(java.util.Locale.getDefault(), "%02d:%02d", m, s)
+    }
+
+    private fun formatPace(distanceKm: Float, timeMs: Long): String {
+        if (distanceKm < 0.01f || timeMs == 0L) return "--:--"
+        val timeMinutes = timeMs / 60000.0
+        val paceMinPerKm = timeMinutes / distanceKm
+        val paceMin = paceMinPerKm.toInt()
+        val paceSec = ((paceMinPerKm - paceMin) * 60).toInt()
+        return String.format(java.util.Locale.getDefault(), "%d:%02d", paceMin, paceSec)
     }
 
     // Edit run title

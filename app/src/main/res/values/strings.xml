@@ -33,7 +33,7 @@
 
     <!-- Default values -->
     <string name="value_zero">0</string>
-    <string name="default_kcal">2,022</string>
+    <string name="default_kcal">2,000</string>
     <string name="default_water">0 / 2,000 ml</string>
 
     <!-- Buttons -->
