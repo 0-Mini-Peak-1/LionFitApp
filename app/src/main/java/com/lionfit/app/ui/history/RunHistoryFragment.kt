@@ -1,6 +1,7 @@
 package com.lionfit.app.ui.history
 
 import android.os.Bundle
+import android.widget.PopupMenu
 import android.view.View
 import android.widget.ImageButton
 import androidx.fragment.app.Fragment
@@ -36,6 +37,9 @@ class RunHistoryFragment : Fragment(R.layout.fragment_run_history) {
     private var swipeRefreshLayout: SwipeRefreshLayout? = null
     private var allRuns = listOf<RunSession>()
     private var currentFilterId = R.id.btnFilterAll
+    // Track the current sorting state
+    enum class SortType { NEWEST, OLDEST, LONGEST_DISTANCE, LONGEST_TIME }
+    private var currentSortType = SortType.NEWEST
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -54,6 +58,28 @@ class RunHistoryFragment : Fragment(R.layout.fragment_run_history) {
                 currentFilterId = checkedId
                 applyFilterAndUpdateUI()
             }
+        }
+
+        // Set up sort button
+        val btnSort = view.findViewById<ImageButton>(R.id.btn_sort_runs)
+        btnSort.setOnClickListener { anchor ->
+            val popup = PopupMenu(requireContext(), anchor)
+            popup.menu.add(0, 1, 0, "Newest First")
+            popup.menu.add(0, 2, 0, "Oldest First")
+            popup.menu.add(0, 3, 0, "Longest Distance")
+            popup.menu.add(0, 4, 0, "Longest Time")
+
+            popup.setOnMenuItemClickListener { item ->
+                currentSortType = when (item.itemId) {
+                    2 -> SortType.OLDEST
+                    3 -> SortType.LONGEST_DISTANCE
+                    4 -> SortType.LONGEST_TIME
+                    else -> SortType.NEWEST
+                }
+                applyFilterAndUpdateUI() // Re-run the math and sort the list
+                true
+            }
+            popup.show()
         }
 
         // Set up the RecyclerView
@@ -125,7 +151,13 @@ class RunHistoryFragment : Fragment(R.layout.fragment_run_history) {
         val currentMonth = now.get(java.util.Calendar.MONTH)
         val currentWeek = now.get(java.util.Calendar.WEEK_OF_YEAR)
 
-        var filteredTitle = "All Time Summary"
+        // Determine the title first before touching the list
+        val filteredTitle = when (currentFilterId) {
+            R.id.btnFilterYear -> "This Year's Summary"
+            R.id.btnFilterMonth -> "This Month's Summary"
+            R.id.btnFilterWeek -> "This Week's Summary"
+            else -> "All Time Summary"
+        }
 
         // FILTER THE DATA
         val filteredRuns = allRuns.filter { run ->
@@ -133,28 +165,22 @@ class RunHistoryFragment : Fragment(R.layout.fragment_run_history) {
 
             when (currentFilterId) {
                 R.id.btnFilterYear -> {
-                    filteredTitle = "This Year's Summary"
                     runCal.get(java.util.Calendar.YEAR) == currentYear
                 }
                 R.id.btnFilterMonth -> {
-                    filteredTitle = "This Month's Summary"
                     runCal.get(java.util.Calendar.YEAR) == currentYear &&
                             runCal.get(java.util.Calendar.MONTH) == currentMonth
                 }
                 R.id.btnFilterWeek -> {
-                    filteredTitle = "This Week's Summary"
                     runCal.get(java.util.Calendar.YEAR) == currentYear &&
                             runCal.get(java.util.Calendar.WEEK_OF_YEAR) == currentWeek
                 }
-                else -> { // btnFilterAll
-                    filteredTitle = "All Time Summary"
-                    true
-                }
+                else -> true // btnFilterAll
             }
         }
 
         // CRUNCH THE MATH
-        val totalDistance = filteredRuns.sumOf { it.distanceInKm }.toFloat()
+        val totalDistance = filteredRuns.sumOf { it.distanceInKm.toDouble() }.toFloat()
         val totalTimeMs = filteredRuns.sumOf { it.durationInMillis }
         val totalRuns = filteredRuns.size
 
@@ -175,7 +201,16 @@ class RunHistoryFragment : Fragment(R.layout.fragment_run_history) {
         } else {
             emptyState?.visibility = View.GONE
             recyclerView?.visibility = View.VISIBLE
-            runHistoryAdapter.submitList(filteredRuns)
+
+            // Apply the current Sort selection
+            val sortedList = when (currentSortType) {
+                SortType.NEWEST -> filteredRuns.sortedByDescending { it.timestamp }
+                SortType.OLDEST -> filteredRuns.sortedBy { it.timestamp }
+                SortType.LONGEST_DISTANCE -> filteredRuns.sortedByDescending { it.distanceInKm }
+                SortType.LONGEST_TIME -> filteredRuns.sortedByDescending { it.durationInMillis }
+            }
+
+            runHistoryAdapter.submitList(sortedList)
         }
     }
 
