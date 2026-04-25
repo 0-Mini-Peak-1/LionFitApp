@@ -49,7 +49,11 @@ class AuthFragment : Fragment(R.layout.fragment_auth) {
 
         // Toggle UI logic
         tvToggle.setOnClickListener {
+            // The Animation
+            android.transition.TransitionManager.beginDelayedTransition(view as android.view.ViewGroup, android.transition.AutoTransition())
+
             isLoginMode = !isLoginMode
+
             if (isLoginMode) {
                 tvTitle.text = "Sign In"
                 btnSubmit.text = "Sign In"
