@@ -283,6 +283,7 @@ class DashboardFragment : Fragment() {
         val tvPace = view.findViewById<TextView>(R.id.tvRunPace)
         val tvTime = view.findViewById<TextView>(R.id.tvRunTime)
         val cardLastRun = view.findViewById<com.google.android.material.card.MaterialCardView>(R.id.cardLastRun)
+        val emptyLastRun = view.findViewById<View>(R.id.layout_empty_last_run)
 
         cardLastRun.setOnClickListener {
             viewLifecycleOwner.lifecycleScope.launch {
@@ -295,6 +296,10 @@ class DashboardFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             db.runDao().getAllRunsSortedByDate().collectLatest { runs ->
                 if (runs.isNotEmpty()) {
+                    // Show the card, hide the empty state
+                    cardLastRun.visibility = View.VISIBLE
+                    emptyLastRun.visibility = View.GONE
+
                     val lastRun = runs.first()
 
                     tvTitle.text = lastRun.title
@@ -315,6 +320,10 @@ class DashboardFragment : Fragment() {
                             error(android.R.drawable.ic_dialog_map)
                         }
                     }
+                } else {
+                    // Hide the card, show the empty state
+                    cardLastRun.visibility = View.GONE
+                    emptyLastRun.visibility = View.VISIBLE
                 }
             }
         }

@@ -29,6 +29,8 @@ import com.google.android.material.datepicker.CalendarConstraints
 import com.google.android.material.datepicker.DateValidatorPointBackward
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
@@ -144,6 +146,13 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
         // Weight up / down button
         btnWeightUp.setOnClickListener { adjustWeight(0.5) }
         btnWeightDown.setOnClickListener { adjustWeight(-0.5) }
+        ivProfilePicture.setOnClickListener {
+            if (!isEditing) {
+                toggleEditingMode(true)
+                val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+                pickImage.launch(intent)
+            }
+        }
 
         // Master button (toggles between "Edit Profile" and "Save")
         btnEditOrSave.setOnClickListener {
@@ -206,6 +215,7 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
     }
 
     private fun toggleEditingMode(editing: Boolean) {
+        android.transition.TransitionManager.beginDelayedTransition(requireView() as android.view.ViewGroup, android.transition.AutoTransition())
         isEditing = editing
         if (editing) {
             // Switch to Edit Mode UI
@@ -337,13 +347,26 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
     private fun handleLogOut() {
         lifecycleScope.launch {
-            SupabaseManager.logOutUser() // Sign out of the session
+            try {
+                withContext(Dispatchers.IO) {
+                    // Nuke the local database
+                    val db = com.lionfit.app.data.database.AppDatabase.getDatabase(requireContext())
+                    db.clearAllTables()
 
-            // Navigate the user back to the Auth screen by killing MainActivity and starting clean
-            val intent = Intent(requireActivity(), MainActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            startActivity(intent)
-            requireActivity().finish() // Kill the current MainActivity instance
+                    // Sign out of the cloud session
+                    SupabaseManager.logOutUser()
+                }
+
+                // Back on the Main UI Thread automatically for screen navigation
+                val intent = Intent(requireActivity(), MainActivity::class.java)
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                startActivity(intent)
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                // We are already back on the Main thread here if it crashes, so Toast is safe!
+                android.widget.Toast.makeText(requireContext(), "Logout failed: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
