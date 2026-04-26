@@ -288,6 +288,7 @@ class AddFoodFragment : Fragment(R.layout.fragment_add_food) {
         val etProtein = dialogView.findViewById<EditText>(R.id.etProtein)
         val etFat = dialogView.findViewById<EditText>(R.id.etFat)
         val etCarb = dialogView.findViewById<EditText>(R.id.etCarb)
+        val etServing = dialogView.findViewById<EditText>(R.id.etServing)
         val btnSave = dialogView.findViewById<Button>(R.id.btnSaveCustomFood)
 
         // Pre-fill data
@@ -297,6 +298,7 @@ class AddFoodFragment : Fragment(R.layout.fragment_add_food) {
         etProtein.setText(food.protein.toString())
         etFat.setText(food.fat.toString())
         etCarb.setText(food.carb.toString())
+        etServing.setText(food.servingSize)
 
         val dialog = AlertDialog.Builder(requireContext())
             .setView(dialogView)
@@ -307,9 +309,12 @@ class AddFoodFragment : Fragment(R.layout.fragment_add_food) {
             val p = etProtein.text.toString().toIntOrNull() ?: 0
             val f = etFat.text.toString().toIntOrNull() ?: 0
             val c = etCarb.text.toString().toIntOrNull() ?: 0
+            val serving = etServing.text.toString().ifEmpty { "1 serving" }
 
             lifecycleScope.launch {
-                val updatedFood = food.copy(calories = cal, protein = p, fat = f, carb = c)
+                // Update food with servingSize!
+                val updatedFood = food.copy(calories = cal, protein = p, fat = f, carb = c, servingSize = serving)
+
                 SupabaseManager.deletePrivateFood(food.name)
                 val result = SupabaseManager.addNewPrivateFood(updatedFood)
                 if (result.isSuccess) {
