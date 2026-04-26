@@ -12,7 +12,7 @@ data class PrivateFood(
     val carb: Int = 0,
     val protein: Int = 0,
     @SerialName("serving_size")
-    val servingSize: String = "1 serving",
+    val servingSize: String? = "1 serving",
     @SerialName("user_id")
     val userId: String
 )

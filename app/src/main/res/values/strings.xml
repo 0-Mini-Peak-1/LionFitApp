@@ -69,5 +69,4 @@
     <string name="chip_cal_short">%d cal</string>
     <string name="chip_fat_short">F %d</string>
     <string name="chip_carb_short">C %d</string>
-    <string name="chip_protein_short">P %d</string>
-</resources>
+    <string name="chip_protein_short">P %d</string></resources>

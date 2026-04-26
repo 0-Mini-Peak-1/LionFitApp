@@ -340,8 +340,65 @@
                             android:layout_height="36dp"
                             android:text="@string/btn_add"
                             android:textColor="#212121"
-                            app:strokeColor="#E0E0E0"
-                            app:cornerRadius="8dp" />
+                            app:cornerRadius="8dp"
+                            app:strokeColor="#E0E0E0" />
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="12dp"
+                        android:paddingBottom="12dp"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/tvBreakfastTotalCal"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0 cal"
+                            android:textSize="12sp"
+                            android:textColor="#212121"
+                            android:background="@drawable/bg_nutrient_cal"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="12dp"
+                            android:layout_marginEnd="8dp" />
+
+                        <TextView
+                            android:id="@+id/tvBreakfastTotalFat"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="F 0"
+                            android:textSize="12sp"
+                            android:textColor="#212121"
+                            android:background="@drawable/bg_nutrient_fat"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="12dp"
+                            android:layout_marginEnd="8dp" />
+
+                        <TextView
+                            android:id="@+id/tvBreakfastTotalCarb"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="C 0"
+                            android:textSize="12sp"
+                            android:textColor="#212121"
+                            android:background="@drawable/bg_nutrient_carb"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="12dp"
+                            android:layout_marginEnd="8dp" />
+
+                        <TextView
+                            android:id="@+id/tvBreakfastTotalProtein"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="P 0"
+                            android:textSize="12sp"
+                            android:textColor="#212121"
+                            android:background="@drawable/bg_nutrient_protein"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="12dp" />
 
                     </LinearLayout>
 
@@ -401,6 +458,63 @@
                     </LinearLayout>
 
                     <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="12dp"
+                        android:paddingBottom="12dp"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/tvLunchTotalCal"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0 cal"
+                            android:textSize="12sp"
+                            android:textColor="#212121"
+                            android:background="@drawable/bg_nutrient_cal"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="12dp"
+                            android:layout_marginEnd="8dp" />
+
+                        <TextView
+                            android:id="@+id/tvLunchTotalFat"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="F 0"
+                            android:textSize="12sp"
+                            android:textColor="#212121"
+                            android:background="@drawable/bg_nutrient_fat"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="12dp"
+                            android:layout_marginEnd="8dp" />
+
+                        <TextView
+                            android:id="@+id/tvLunchTotalCarb"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="C 0"
+                            android:textSize="12sp"
+                            android:textColor="#212121"
+                            android:background="@drawable/bg_nutrient_carb"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="12dp"
+                            android:layout_marginEnd="8dp" />
+
+                        <TextView
+                            android:id="@+id/tvLunchTotalProtein"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="P 0"
+                            android:textSize="12sp"
+                            android:textColor="#212121"
+                            android:background="@drawable/bg_nutrient_protein"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="12dp" />
+
+                    </LinearLayout>
+
+                    <LinearLayout
                         android:id="@+id/llLunchItems"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -452,6 +566,63 @@
                             android:textColor="#212121"
                             app:strokeColor="#E0E0E0"
                             app:cornerRadius="8dp" />
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="12dp"
+                        android:paddingBottom="12dp"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/tvDinnerTotalCal"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0 cal"
+                            android:textSize="12sp"
+                            android:textColor="#212121"
+                            android:background="@drawable/bg_nutrient_cal"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="12dp"
+                            android:layout_marginEnd="8dp" />
+
+                        <TextView
+                            android:id="@+id/tvDinnerTotalFat"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="F 0"
+                            android:textSize="12sp"
+                            android:textColor="#212121"
+                            android:background="@drawable/bg_nutrient_fat"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="12dp"
+                            android:layout_marginEnd="8dp" />
+
+                        <TextView
+                            android:id="@+id/tvDinnerTotalCarb"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="C 0"
+                            android:textSize="12sp"
+                            android:textColor="#212121"
+                            android:background="@drawable/bg_nutrient_carb"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="12dp"
+                            android:layout_marginEnd="8dp" />
+
+                        <TextView
+                            android:id="@+id/tvDinnerTotalProtein"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="P 0"
+                            android:textSize="12sp"
+                            android:textColor="#212121"
+                            android:background="@drawable/bg_nutrient_protein"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="12dp" />
 
                     </LinearLayout>
 
@@ -508,6 +679,63 @@
                             android:textColor="#212121"
                             app:strokeColor="#E0E0E0"
                             app:cornerRadius="8dp" />
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="12dp"
+                        android:paddingBottom="12dp"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/tvSnackTotalCal"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0 cal"
+                            android:textSize="12sp"
+                            android:textColor="#212121"
+                            android:background="@drawable/bg_nutrient_cal"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="12dp"
+                            android:layout_marginEnd="8dp" />
+
+                        <TextView
+                            android:id="@+id/tvSnackTotalFat"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="F 0"
+                            android:textSize="12sp"
+                            android:textColor="#212121"
+                            android:background="@drawable/bg_nutrient_fat"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="12dp"
+                            android:layout_marginEnd="8dp" />
+
+                        <TextView
+                            android:id="@+id/tvSnackTotalCarb"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="C 0"
+                            android:textSize="12sp"
+                            android:textColor="#212121"
+                            android:background="@drawable/bg_nutrient_carb"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="12dp"
+                            android:layout_marginEnd="8dp" />
+
+                        <TextView
+                            android:id="@+id/tvSnackTotalProtein"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="P 0"
+                            android:textSize="12sp"
+                            android:textColor="#212121"
+                            android:background="@drawable/bg_nutrient_protein"
+                            android:paddingHorizontal="12dp"
+                            android:paddingVertical="12dp" />
 
                     </LinearLayout>
 
