@@ -266,7 +266,43 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
     private fun saveProfileChanges() {
         if (currentProfile == null) return
 
-        btnEditOrSave.isEnabled = false // Disable to prevent double-clicks
+        // Read all the inputs
+        val newName = etNameEdit.text.toString().trim()
+        val newPhone = etPhoneEdit.text.toString().trim()
+        val newBirthDate = etBirthDateEdit.text.toString().trim()
+        val newGender = etGenderEdit.text.toString().trim()
+        val newHeight = etHeightEdit.text.toString().toDoubleOrNull() ?: 0.0
+        val newWeight = etWeightEdit.text.toString().toDoubleOrNull() ?: 0.0
+
+        // FRONT-LINE VALIDATION DEFENSES
+
+        // Defense A: Empty Name Check
+        if (newName.isEmpty()) {
+            Toast.makeText(requireContext(), "Name cannot be empty", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Defense B: Realistic Biometrics Check
+        if (newWeight !in 20.0..400.0 && newHeight !in 50.0..300.0) {
+            Toast.makeText(requireContext(), "Please enter realistic weight and height measurements", Toast.LENGTH_LONG).show()
+            return
+        } else if (newWeight !in 20.0..400.0) {
+            Toast.makeText(requireContext(), "Weight must be between 20kg and 400kg", Toast.LENGTH_LONG).show()
+            return
+        } else if (newHeight !in 50.0..300.0) {
+            Toast.makeText(requireContext(), "Height must be between 50cm and 300cm", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        // Defense C: Phone Number Format Check (Only if they actually typed one)
+        val phoneRegex = "^[0-9]{9,15}$".toRegex()
+        if (newPhone.isNotEmpty() && !newPhone.matches(phoneRegex)) {
+            Toast.makeText(requireContext(), "Please enter a valid phone number (9-15 digits)", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        // If all checks pass, lock the button and begin the network save
+        btnEditOrSave.isEnabled = false
 
         lifecycleScope.launch {
             try {
@@ -278,14 +314,14 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
                     finalPicUrl = "$rawUrl?t=${System.currentTimeMillis()}"
                 }
 
-                // Build the final UserProfile object with the new UI data
+                // Build the final UserProfile object with the pre-validated UI data
                 val updatedProfile = currentProfile!!.copy(
-                    fullName = etNameEdit.text.toString().trim(),
-                    phoneNumber = etPhoneEdit.text.toString().trim(),
-                    birthDate = etBirthDateEdit.text.toString().trim(),
-                    gender = etGenderEdit.text.toString().trim(),
-                    heightCm = etHeightEdit.text.toString().toDoubleOrNull() ?: 0.0,
-                    weightKg = etWeightEdit.text.toString().toDoubleOrNull() ?: 0.0,
+                    fullName = newName,
+                    phoneNumber = newPhone,
+                    birthDate = newBirthDate,
+                    gender = newGender,
+                    heightCm = newHeight,
+                    weightKg = newWeight,
                     profilePicUrl = finalPicUrl
                 )
 
@@ -325,7 +361,10 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
         val newWeight = Math.round((profile.weightKg + delta) * 10.0) / 10.0
 
         // Prevent negative or zero weight
-        if (newWeight <= 0) return
+        if (newWeight !in 20.0..400.0) {
+            Toast.makeText(requireContext(), "Weight must be between 20kg and 400kg", Toast.LENGTH_SHORT).show()
+            return
+        }
 
         // Optimistic UI Update
         currentProfile = profile.copy(weightKg = newWeight)
