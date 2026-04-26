@@ -28,11 +28,20 @@ object SupabaseManager {
         install(Storage)
     }
 
+    // Security Gateway
+    // Routes all network errors here. Only prints if testing in Android Studio.
+    private fun secureLog(tag: String, e: Exception) {
+        if (BuildConfig.DEBUG) {
+            android.util.Log.e(tag, "Error: ${e.message}", e)
+        }
+    }
+
     suspend fun logOutUser() {
         withContext(Dispatchers.IO) {
             try {
                 client.auth.signOut()
             } catch (e: Exception) {
+                secureLog("SupabaseAuth", e)
                 client.auth.clearSession()
             }
         }
@@ -47,15 +56,14 @@ object SupabaseManager {
                 }
                 .decodeList<RunSession>()
         } catch (e: Exception) {
-            e.printStackTrace()
-            emptyList() // Return an empty list if something fails or they have no runs
+            secureLog("SupabaseRun", e)
+            emptyList()
         }
     }
 
     suspend fun getProfile(userId: String): UserProfile? {
         return withContext(Dispatchers.IO) {
             try {
-                // In Kotlin, filters must be inside a select block!
                 client.postgrest.from("profiles")
                     .select {
                         filter {
@@ -63,6 +71,7 @@ object SupabaseManager {
                         }
                     }.decodeSingleOrNull<UserProfile>()
             } catch (e: Exception) {
+                secureLog("SupabaseProfile", e)
                 null
             }
         }
@@ -70,7 +79,12 @@ object SupabaseManager {
 
     suspend fun updateProfile(profile: UserProfile) {
         withContext(Dispatchers.IO) {
-            client.postgrest.from("profiles").upsert(profile)
+            try {
+                client.postgrest.from("profiles").upsert(profile)
+            } catch (e: Exception) {
+                secureLog("SupabaseProfile", e)
+                throw e
+            }
         }
     }
 
@@ -89,66 +103,65 @@ object SupabaseManager {
             client.postgrest["run_sessions"].insert(runSession)
             true
         } catch (e: Exception) {
-            e.printStackTrace()
-            // If the user is offline or the server rejects it, it safely returns false
+            secureLog("SupabaseRun", e)
             false
         }
     }
 
     suspend fun uploadRunSnapshot(userId: String, timestamp: Long, imageBytes: ByteArray): String? {
         return try {
-            // Create a unique file name using their ID and the time
             val fileName = "${userId}_${timestamp}.jpg"
             val bucket = client.storage["run-snapshots"]
-
             bucket.upload(path = fileName, data = imageBytes, upsert = true)
-
-            // Return the public URL
             bucket.publicUrl(fileName)
         } catch (e: Exception) {
-            android.util.Log.e("SupabaseStorage", "Failed to upload snapshot: ${e.message}")
+            secureLog("SupabaseStorage", e)
             null
         }
     }
 
     suspend fun updateRunTitle(runId: String, newTitle: String) {
-        client.postgrest["run_sessions"].update({
-            set("title", newTitle)
-        }) {
-            filter { eq("id", runId) }
+        try {
+            client.postgrest["run_sessions"].update({
+                set("title", newTitle)
+            }) {
+                filter { eq("id", runId) }
+            }
+        } catch (e: Exception) {
+            secureLog("SupabaseRun", e)
+            throw e
         }
     }
 
-    // Delete the database row
     suspend fun deleteRunSession(runId: String) {
-        client.postgrest["run_sessions"].delete {
-            filter { eq("id", runId) }
+        try {
+            client.postgrest["run_sessions"].delete {
+                filter { eq("id", runId) }
+            }
+        } catch (e: Exception) {
+            secureLog("SupabaseRun", e)
+            throw e
         }
     }
 
-    // Delete the image file to save storage space
     suspend fun deleteRunSnapshot(fileName: String) {
         try {
             client.storage["run-snapshots"].delete(listOf(fileName))
         } catch (e: Exception) {
-            // We just catch and log this. If the image delete fails,
-            // we don't want it to stop the whole database deletion process.
-            android.util.Log.e("SupabaseStorage", "Failed to delete image: ${e.message}")
+            secureLog("SupabaseStorage", e)
         }
     }
 
-    // Sync Diet to Cloud
     suspend fun syncDietToCloud(dietLog: DietLog): Boolean {
         return try {
             client.postgrest["diet_logs"].insert(dietLog)
             true
         } catch (e: Exception) {
-            e.printStackTrace()
+            secureLog("SupabaseDiet", e)
             false
         }
     }
 
-    // ลบข้อมูล DietLog จาก Cloud
     suspend fun deleteDietLogFromCloud(logId: String): Boolean {
         return try {
             client.postgrest["diet_logs"].delete {
@@ -156,12 +169,11 @@ object SupabaseManager {
             }
             true
         } catch (e: Exception) {
-            e.printStackTrace()
+            secureLog("SupabaseDiet", e)
             false
         }
     }
 
-    // ลบข้อมูล WaterLog จาก Cloud
     suspend fun deleteWaterLogFromCloud(logId: String): Boolean {
         return try {
             client.postgrest["water_logs"].delete {
@@ -169,29 +181,25 @@ object SupabaseManager {
             }
             true
         } catch (e: Exception) {
-            e.printStackTrace()
+            secureLog("SupabaseWater", e)
             false
         }
     }
 
-    // Sync Water to Cloud
     suspend fun syncWaterToCloud(waterLog: com.lionfit.app.data.model.WaterLog): Boolean {
         val currentUser = client.auth.currentUserOrNull() ?: return false
         return withContext(Dispatchers.IO) {
             try {
-                // ต้องมั่นใจว่า userId เป็น UUID ของผู้ใช้จริง
                 val logWithUser = waterLog.copy(userId = currentUser.id)
                 client.postgrest.from("water_logs").insert(logWithUser)
                 true
             } catch (e: Exception) {
-                android.util.Log.e("SupabaseSync", "Water Sync Failed: ${e.message}")
+                secureLog("SupabaseWater", e)
                 false
             }
         }
     }
 
-    // บันทึกเมนูอาหารใหม่ลงตาราง foods
-    // ดึงรายการวันที่ทั้งหมดที่มีข้อมูลจาก Cloud
     suspend fun getLoggedDates(): Set<Long> {
         val currentUser = client.auth.currentUserOrNull() ?: return emptySet()
         return withContext(Dispatchers.IO) {
@@ -208,13 +216,12 @@ object SupabaseManager {
 
                 (dietDates + waterDates).toSet()
             } catch (e: Exception) {
-                android.util.Log.e("SupabaseSync", "Failed to fetch dates: ${e.message}")
+                secureLog("SupabaseSync", e)
                 emptySet()
             }
         }
     }
 
-    // ดึงข้อมูล DietLog ของวันที่กำหนดจาก Cloud
     suspend fun getDietLogsFromCloud(start: Long, end: Long): List<DietLog> {
         val currentUser = client.auth.currentUserOrNull() ?: return emptyList()
         return try {
@@ -225,20 +232,22 @@ object SupabaseManager {
                     lte("date_logged", end)
                 }
             }.decodeList<DietLog>()
-        } catch (e: Exception) { emptyList() }
+        } catch (e: Exception) {
+            secureLog("SupabaseDiet", e)
+            emptyList()
+        }
     }
 
-    // ดึงรายการอาหารทั้งหมด (รวมจาก foods กลาง และ private_foods ของผู้ใช้)
     suspend fun getAllFoods(): List<com.lionfit.app.data.model.FoodItem> {
         val currentUser = client.auth.currentUserOrNull()
         return try {
             val publicFoods = client.postgrest.from("foods").select().decodeList<com.lionfit.app.data.model.FoodItem>()
-            
+
             val privateFoods = if (currentUser != null) {
                 client.postgrest.from("private_foods")
                     .select { filter { eq("user_id", currentUser.id) } }
                     .decodeList<com.lionfit.app.data.model.PrivateFood>()
-                    .map { 
+                    .map {
                         com.lionfit.app.data.model.FoodItem(
                             name = it.name,
                             calories = it.calories,
@@ -252,12 +261,11 @@ object SupabaseManager {
 
             (publicFoods + privateFoods).distinctBy { it.name.lowercase() }
         } catch (e: Exception) {
-            e.printStackTrace()
+            secureLog("SupabaseDiet", e)
             emptyList()
         }
     }
 
-    // ดึงเฉพาะเมนูอาหารส่วนตัวของผู้ใช้
     suspend fun getOnlyPrivateFoods(): List<com.lionfit.app.data.model.PrivateFood> {
         val currentUser = client.auth.currentUserOrNull() ?: return emptyList()
         return try {
@@ -265,29 +273,26 @@ object SupabaseManager {
                 .select { filter { eq("user_id", currentUser.id) } }
                 .decodeList<com.lionfit.app.data.model.PrivateFood>()
         } catch (e: Exception) {
-            e.printStackTrace()
+            secureLog("SupabaseDiet", e)
             emptyList()
         }
     }
 
-    // บันทึกเมนูอาหารใหม่ลงตาราง private_foods และเช็คชื่อซ้ำ
     suspend fun addNewPrivateFood(food: com.lionfit.app.data.model.PrivateFood): Result<Unit> {
         return try {
-            // เช็คชื่อซ้ำในรายการอาหารที่มีอยู่แล้ว
             val existing = getAllFoods()
             if (existing.any { it.name.equals(food.name, ignoreCase = true) }) {
                 return Result.failure(Exception("ALREADY_EXISTS"))
             }
-            
+
             client.postgrest.from("private_foods").insert(food)
             Result.success(Unit)
         } catch (e: Exception) {
-            e.printStackTrace()
+            secureLog("SupabaseDiet", e)
             Result.failure(e)
         }
     }
 
-    // ลบเมนูอาหารส่วนตัว
     suspend fun deletePrivateFood(name: String): Boolean {
         val currentUser = client.auth.currentUserOrNull() ?: return false
         return try {
@@ -299,12 +304,11 @@ object SupabaseManager {
             }
             true
         } catch (e: Exception) {
-            e.printStackTrace()
+            secureLog("SupabaseDiet", e)
             false
         }
     }
 
-    // ดึงข้อมูล WaterLog ของวันที่กำหนดจาก Cloud
     suspend fun getWaterLogsFromCloud(start: Long, end: Long): List<com.lionfit.app.data.model.WaterLog> {
         val currentUser = client.auth.currentUserOrNull() ?: return emptyList()
         return try {
@@ -316,13 +320,10 @@ object SupabaseManager {
                 }
             }.decodeList<com.lionfit.app.data.model.WaterLog>()
         } catch (e: Exception) {
-            android.util.Log.e("SupabaseSync", "Failed to fetch water logs: ${e.message}")
+            secureLog("SupabaseWater", e)
             emptyList()
         }
     }
-
-    // Sync Sleep to Cloud
-    // --- SLEEP SYNC FUNCTIONS ---
 
     suspend fun saveSleepRecord(sleepRecord: SleepRecord): Boolean {
         return withContext(Dispatchers.IO) {
@@ -330,13 +331,12 @@ object SupabaseManager {
                 client.postgrest["sleep_records"].insert(sleepRecord)
                 true
             } catch (e: Exception) {
-                e.printStackTrace()
+                secureLog("SupabaseSleep", e)
                 false
             }
         }
     }
 
-    // Delete Sleep from Cloud
     suspend fun deleteSleepRecord(recordId: String) {
         withContext(Dispatchers.IO) {
             try {
@@ -344,7 +344,7 @@ object SupabaseManager {
                     filter { eq("id", recordId) }
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                secureLog("SupabaseSleep", e)
             }
         }
     }
@@ -357,7 +357,7 @@ object SupabaseManager {
                 }
                 .decodeList<SleepRecord>()
         } catch (e: Exception) {
-            e.printStackTrace()
+            secureLog("SupabaseSleep", e)
             emptyList()
         }
     }

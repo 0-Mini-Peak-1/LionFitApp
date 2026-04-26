@@ -16,33 +16,40 @@
             android:orientation="vertical">
 
             <!-- Yellow Header Bar with Date Selection -->
-            <LinearLayout
+            <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="?attr/actionBarSize"
-                android:background="#FFC107"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingHorizontal="16dp">
+                android:background="#F5F5F5">
 
                 <TextView
                     android:id="@+id/tvSelectedDate"
-                    android:layout_width="0dp"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:gravity="center"
                     android:text="Today"
                     android:textColor="#212121"
                     android:textSize="18sp"
                     android:textStyle="bold"
-                    app:drawableEndCompat="@drawable/ic_calendar"
-                    android:drawablePadding="8dp"
-                    android:paddingStart="24dp"
-                    android:paddingEnd="24dp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent" />
+
+                <ImageView
+                    android:id="@+id/ivCalendarIcon"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="16dp"
+                    android:src="@drawable/ic_calendar"
+                    app:tint="#212121"
+                    android:padding="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
                     android:clickable="true"
                     android:focusable="true"
-                    android:background="?attr/selectableItemBackground" />
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent" />
 
-            </LinearLayout>
+            </androidx.constraintlayout.widget.ConstraintLayout>
 
             <!-- Calorie Summary Section -->
             <LinearLayout

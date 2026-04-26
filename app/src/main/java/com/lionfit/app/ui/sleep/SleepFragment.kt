@@ -518,20 +518,50 @@ fun SleepChartContent(
     records: List<SleepRecord>,
     startOfWeek: LocalDate,
     selectedRecord: SleepRecord?,
-    onRecordClick: (SleepRecord) -> Unit
+    onRecordClick: (SleepRecord) -> Unit,
+    isDashboard: Boolean = false
 ) {
     val daysLabels = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
-    val hourHeight = 45.dp
+    val hourHeight = if (isDashboard) 10.dp else 45.dp
 
     Column(modifier = Modifier.fillMaxSize()) {
         Box(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-            Box(modifier = Modifier.fillMaxWidth().height(hourHeight * 24).padding(vertical = 16.dp, horizontal = 8.dp)) {
+            Box(modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 16.dp, horizontal = 8.dp)
+                .height(hourHeight * 25)
+            ) {
+
+                // FIX THE BACKGROUND LINES
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    repeat(25) { Box(modifier = Modifier.height(hourHeight)) { HorizontalDivider(color = ComposeColor.Gray.copy(alpha = 0.1f)) } }
+                    repeat(25) { i ->
+                        Box(modifier = Modifier.height(hourHeight)) {
+                            if (!isDashboard || i % 6 == 0) {
+                                HorizontalDivider(color = ComposeColor.Gray.copy(alpha = 0.1f))
+                            }
+                        }
+                    }
                 }
+
                 Row(modifier = Modifier.fillMaxSize()) {
                     Column(modifier = Modifier.width(40.dp)) {
-                        repeat(25) { i -> Box(modifier = Modifier.height(hourHeight)) { Text(String.format(Locale.getDefault(), "%02d:00", i), color = ComposeColor.LightGray, fontSize = 10.sp) } }
+                        repeat(25) { i ->
+                            Box(modifier = Modifier.height(hourHeight), contentAlignment = Alignment.TopStart) {
+                                if (!isDashboard || i % 6 == 0) {
+                                    Text(
+                                        text = String.format(Locale.getDefault(), "%02d:00", i),
+                                        color = ComposeColor.Gray,
+                                        fontSize = 10.sp,
+                                        maxLines = 1,
+                                        softWrap = false,
+                                        // Ignore the 8dp box limit and draw the full text!
+                                        modifier = Modifier
+                                            .wrapContentHeight(unbounded = true)
+                                            .offset(y = (-7).dp) // Centers it perfectly on the grid line
+                                    )
+                                }
+                            }
+                        }
                     }
                     Row(modifier = Modifier.weight(1f).fillMaxHeight(), horizontalArrangement = Arrangement.SpaceBetween) {
                         daysLabels.forEachIndexed { index, _ ->

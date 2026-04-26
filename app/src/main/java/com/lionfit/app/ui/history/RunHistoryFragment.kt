@@ -281,9 +281,15 @@ class RunHistoryFragment : Fragment(R.layout.fragment_run_history) {
                     fetchRunHistory()
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                // Silent log for the developer
+                if (com.lionfit.app.BuildConfig.DEBUG) {
+                    e.printStackTrace()
+                    android.util.Log.e("RunHistoryFragment", "Edit Run error: ${e.message}")
+                }
+                // Safe message for the user
                 withContext(Dispatchers.Main) {
-                    android.widget.Toast.makeText(requireContext(), "Update failed: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                    android.widget.Toast.makeText(requireContext(), "Could not edit run data. Please check your connection.", android.widget.Toast.LENGTH_LONG).show()
+
                 }
             }
         }
@@ -327,9 +333,14 @@ class RunHistoryFragment : Fragment(R.layout.fragment_run_history) {
                     fetchRunHistory()
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                // Silent log for the developer
+                if (com.lionfit.app.BuildConfig.DEBUG) {
+                    e.printStackTrace()
+                    android.util.Log.e("DietFragment", "Delete Run error: ${e.message}")
+                }
+                // Safe message for the user
                 withContext(Dispatchers.Main) {
-                    android.widget.Toast.makeText(requireContext(), "Delete failed: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                    android.widget.Toast.makeText(requireContext(), "Could not delete run data. Please check your connection.", android.widget.Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -412,9 +423,12 @@ class RunHistoryFragment : Fragment(R.layout.fragment_run_history) {
                 }
 
             } catch (e: Exception) {
-                e.printStackTrace()
+                if (com.lionfit.app.BuildConfig.DEBUG) {
+                    e.printStackTrace()
+                    android.util.Log.e("RunHistoryFragment", "Share Run error: ${e.message}")
+                }
                 withContext(Dispatchers.Main) {
-                    android.widget.Toast.makeText(requireContext(), "Error generating image: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                    android.widget.Toast.makeText(requireContext(), "Could not share run data. Please check your connection.", android.widget.Toast.LENGTH_LONG).show()
                 }
             }
         }
