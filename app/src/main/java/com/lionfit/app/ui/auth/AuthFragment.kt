@@ -103,8 +103,22 @@ class AuthFragment : Fragment(R.layout.fragment_auth) {
             val email = etEmail.text.toString().trim()
             val password = etPassword.text.toString().trim()
 
+            // 1. Check if empty
             if (email.isEmpty() || password.isEmpty()) {
                 Toast.makeText(requireContext(), "Email and Password required", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            // 2. Strict Email Format Check
+            val emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[a-zA-Z]{2,6}$".toRegex()
+            if (!email.matches(emailRegex)) {
+                Toast.makeText(requireContext(), "Please enter a valid email format (e.g., name@email.com)", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            // Password Length Check (Supabase requires 6+ chars)
+            if (password.length < 6) {
+                Toast.makeText(requireContext(), "Password must be at least 6 characters", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -127,9 +141,19 @@ class AuthFragment : Fragment(R.layout.fragment_auth) {
                         val height = etHeight.text.toString().toDoubleOrNull() ?: 0.0
                         val dob = etSignupDob.text.toString()
 
-                        if (name.isEmpty() || weight == 0.0 || height == 0.0 || dob.isEmpty()) {
+                        // Check if Name or DOB is missing
+                        if (name.isEmpty() || dob.isEmpty()) {
                             withContext(Dispatchers.Main) {
-                                Toast.makeText(requireContext(), "Please fill in all profile fields correctly", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(requireContext(), "Please provide your full name and date of birth", Toast.LENGTH_SHORT).show()
+                                btnSubmit.isEnabled = true
+                            }
+                            return@launch
+                        }
+
+                        // Realistic biometrics check for accurate BMR/TDEE
+                        if (weight !in 20.0..400.0 || height !in 50.0..300.0) {
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(requireContext(), "Please enter realistic weight and height measurements", Toast.LENGTH_LONG).show()
                                 btnSubmit.isEnabled = true
                             }
                             return@launch
