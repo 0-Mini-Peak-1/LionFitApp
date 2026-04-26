@@ -158,8 +158,13 @@ class SaveActivityFragment : Fragment(R.layout.fragment_save_activity) {
                         saveFinalRunData(finalSessionToSave)
 
                     } catch (e: Exception) {
-                        e.printStackTrace()
-                        Toast.makeText(requireContext(), "Save failed: ${e.message}", Toast.LENGTH_LONG).show()
+                        // Silent log for the developer
+                        if (com.lionfit.app.BuildConfig.DEBUG) {
+                            e.printStackTrace()
+                            android.util.Log.e("SaveActivity", "Save error: ${e.message}")
+                        }
+                        // Safe message for the user
+                        Toast.makeText(requireContext(), "Could not save activity. Please check your connection.", Toast.LENGTH_LONG).show()
                         // Re-enable the button if it fails so they can try again
                         btnSave.isEnabled = true
                         btnSave.text = "Save Activity"

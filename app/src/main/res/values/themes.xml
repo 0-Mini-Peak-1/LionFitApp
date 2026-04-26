@@ -4,7 +4,7 @@
         <item name="android:windowLightStatusBar">true</item>
     </style>
 
-    <color name="lion_fit_yellow">#FFD600</color> <color name="save_button_black">#212121</color>
+    <color name="lion_fit_yellow">#FFC107</color> <color name="save_button_black">#212121</color>
     <color name="hint_grey">#9E9E9E</color>
     <color name="text_grey_light">#757575</color>
 

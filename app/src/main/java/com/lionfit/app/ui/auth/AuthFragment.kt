@@ -169,8 +169,20 @@ class AuthFragment : Fragment(R.layout.fragment_auth) {
                     }
 
                 } catch (e: Exception) {
+                    // Log the real error to the console ONLY if we are in Debug mode
+                    if (com.lionfit.app.BuildConfig.DEBUG) {
+                        android.util.Log.e("AuthFragment", "Supabase Login Error: ${e.localizedMessage}")
+                    }
+
+                    // Show a safe, friendly message to the user
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(requireContext(), e.localizedMessage ?: "Action Failed", Toast.LENGTH_LONG).show()
+                        val safeErrorMessage = if (isLoginMode) {
+                            "Login failed. Please check your email and password."
+                        } else {
+                            "Sign up failed. This email might already be in use."
+                        }
+
+                        Toast.makeText(requireContext(), safeErrorMessage, Toast.LENGTH_LONG).show()
                         btnSubmit.isEnabled = true
                     }
                 }

@@ -19,3 +19,17 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# 🌟 Completely delete all manual Logs from the Release APK
+-assumenosideeffects class android.util.Log {
+    public static *** d(...);
+    public static *** v(...);
+    public static *** i(...);
+    public static *** w(...);
+    public static *** e(...);
+}
+
+# 🌟 Completely delete all printStackTrace calls from the Release APK
+-assumenosideeffects class java.lang.Throwable {
+    public *** printStackTrace();
+}

@@ -302,7 +302,12 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
 
                 Toast.makeText(requireContext(), "Profile Updated!", Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
-                Toast.makeText(requireContext(), "Failed to save: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                if (com.lionfit.app.BuildConfig.DEBUG) {
+                    android.util.Log.e("ProfileFragment", "Update Profile error: ${e.localizedMessage}")
+                }
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(requireContext(), "Failed to update profile. Please check your connection", Toast.LENGTH_LONG).show()
+                }
             } finally {
                 btnEditOrSave.isEnabled = true // Re-enable button
             }
@@ -363,9 +368,11 @@ class ProfileFragment : Fragment(R.layout.fragment_profile) {
                 startActivity(intent)
 
             } catch (e: Exception) {
-                e.printStackTrace()
-                // We are already back on the Main thread here if it crashes, so Toast is safe!
-                android.widget.Toast.makeText(requireContext(), "Logout failed: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+                if (com.lionfit.app.BuildConfig.DEBUG) {
+                    e.printStackTrace()
+                    android.util.Log.e("ProfileFragment", "Logout error: ${e.message}")
+                }
+                Toast.makeText(requireContext(), "Logout failed. Please check your connection.", Toast.LENGTH_LONG).show()
             }
         }
     }

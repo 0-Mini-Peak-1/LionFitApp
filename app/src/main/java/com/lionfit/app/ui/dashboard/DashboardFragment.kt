@@ -370,7 +370,8 @@ class DashboardFragment : Fragment() {
                     records = dashboardSleepRecords,
                     startOfWeek = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY)),
                     selectedRecord = null,
-                    onRecordClick = { }
+                    onRecordClick = { },
+                    isDashboard = true
                 )
             }
         }

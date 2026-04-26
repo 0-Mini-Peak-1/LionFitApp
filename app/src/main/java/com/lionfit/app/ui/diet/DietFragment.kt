@@ -26,9 +26,11 @@ import com.google.android.material.datepicker.DayViewDecorator
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Parcel
+import android.widget.ImageView
 import com.lionfit.app.utils.Calculators
 import kotlinx.coroutines.flow.combine
 import androidx.fragment.app.activityViewModels
+import com.lionfit.app.BuildConfig
 import com.lionfit.app.ui.shared.SharedViewModel
 
 class DietFragment : Fragment(R.layout.fragment_diet) {
@@ -71,6 +73,9 @@ class DietFragment : Fragment(R.layout.fragment_diet) {
 
         // คลิกที่วันที่เพื่อเปิดปฏิทิน
         view.findViewById<View>(R.id.tvSelectedDate).setOnClickListener {
+            showDatePicker(view)
+        }
+        view.findViewById<ImageView>(R.id.ivCalendarIcon).setOnClickListener {
             showDatePicker(view)
         }
 
@@ -144,7 +149,9 @@ class DietFragment : Fragment(R.layout.fragment_diet) {
 
         view.findViewById<View>(R.id.btnUndoWater)?.setOnClickListener {
             // เช็คว่ามีปุ่มให้กดไหม
-            android.util.Log.d("UndoWater", "ปุ่มถูกกดแล้ว!")
+            if (BuildConfig.DEBUG) {
+                android.util.Log.d("UndoWater", "ปุ่มถูกกดแล้ว!")
+            }
 
             val currentUser = SupabaseManager.client.auth.currentUserOrNull()
             if (currentUser == null) {
@@ -183,8 +190,12 @@ class DietFragment : Fragment(R.layout.fragment_diet) {
                         android.widget.Toast.makeText(requireContext(), "ไม่พบประวัติ", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 } catch (e: Exception) {
-                    // ถ้าพังระหว่างทาง มันจะฟ้องข้อความตรงนี้
-                    android.widget.Toast.makeText(requireContext(), "Error: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                    // Silent log for the developer
+                    if (com.lionfit.app.BuildConfig.DEBUG) {
+                        android.util.Log.e("DietFragment", "Undo error: ${e.message}")
+                    }
+                    // Safe message for the user
+                    android.widget.Toast.makeText(requireContext(), "Could not undo water logging. Please check your connection.", android.widget.Toast.LENGTH_LONG).show()
                 }
             }
         }
