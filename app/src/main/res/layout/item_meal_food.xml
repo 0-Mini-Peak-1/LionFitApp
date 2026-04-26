@@ -5,8 +5,8 @@
     android:orientation="horizontal"
     android:paddingStart="16dp"
     android:paddingEnd="16dp"
-    android:paddingTop="4dp"
-    android:paddingBottom="4dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp"
     android:gravity="center_vertical">
 
     <LinearLayout
@@ -19,27 +19,22 @@
             android:id="@+id/tvMealFoodName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/placeholder_food_result_name"
-            android:textColor="#424242"
-            android:textSize="14sp" />
+            android:text="Food Name"
+            android:textColor="#212121"
+            android:textSize="16sp"
+            android:textStyle="bold" />
 
-        <TextView
-            android:id="@+id/tvMealFoodMacros"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="P: 0g | F: 0g | C: 0g"
-            android:textColor="#9E9E9E"
-            android:textSize="11sp" />
     </LinearLayout>
 
     <TextView
         android:id="@+id/tvMealFoodCal"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/placeholder_cal"
-        android:textColor="#757575"
-        android:textSize="13sp"
-        android:layout_marginEnd="8dp"/>
+        android:layout_marginEnd="12dp"
+        android:text="0 kcal"
+        android:textColor="#212121"
+        android:textSize="15sp"
+        android:textStyle="bold" />
 
     <ImageButton
         android:id="@+id/btnDeleteMealItem"

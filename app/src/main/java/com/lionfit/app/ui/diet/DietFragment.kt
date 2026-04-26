@@ -461,10 +461,20 @@ class DietFragment : Fragment(R.layout.fragment_diet) {
                     }
 
                     // 3. Render the food lists below
-                    renderMealItems(llBreakfast, logs.filter { it.mealType == "Breakfast" })
-                    renderMealItems(llLunch,     logs.filter { it.mealType == "Lunch" })
-                    renderMealItems(llDinner,    logs.filter { it.mealType == "Dinner" })
-                    renderMealItems(llSnack,     logs.filter { it.mealType == "Snack" })
+                    val breakfastLogs = logs.filter { it.mealType == "Breakfast" }
+                    val lunchLogs     = logs.filter { it.mealType == "Lunch" }
+                    val dinnerLogs    = logs.filter { it.mealType == "Dinner" }
+                    val snackLogs     = logs.filter { it.mealType == "Snack" }
+
+                    updateMealSummary(view, "Breakfast", breakfastLogs)
+                    updateMealSummary(view, "Lunch",     lunchLogs)
+                    updateMealSummary(view, "Dinner",    dinnerLogs)
+                    updateMealSummary(view, "Snack",     snackLogs)
+
+                    renderMealItems(llBreakfast, breakfastLogs)
+                    renderMealItems(llLunch,     lunchLogs)
+                    renderMealItems(llDinner,    dinnerLogs)
+                    renderMealItems(llSnack,     snackLogs)
                 }
             }
 
@@ -492,16 +502,48 @@ class DietFragment : Fragment(R.layout.fragment_diet) {
         }
     }
 
+    private fun updateMealSummary(view: View, mealType: String, logs: List<DietLog>) {
+        val totalCal     = logs.sumOf { it.calories }
+        val totalProtein = logs.sumOf { it.protein }
+        val totalFat     = logs.sumOf { it.fat }
+        val totalCarb    = logs.sumOf { it.carb }
+
+        when (mealType) {
+            "Breakfast" -> {
+                view.findViewById<TextView>(R.id.tvBreakfastTotalCal).text = getString(R.string.format_kcal, totalCal)
+                view.findViewById<TextView>(R.id.tvBreakfastTotalProtein).text = "P $totalProtein"
+                view.findViewById<TextView>(R.id.tvBreakfastTotalFat).text = "F $totalFat"
+                view.findViewById<TextView>(R.id.tvBreakfastTotalCarb).text = "C $totalCarb"
+            }
+            "Lunch" -> {
+                view.findViewById<TextView>(R.id.tvLunchTotalCal)?.text = getString(R.string.format_kcal, totalCal)
+                view.findViewById<TextView>(R.id.tvLunchTotalProtein)?.text = "P $totalProtein"
+                view.findViewById<TextView>(R.id.tvLunchTotalFat)?.text = "F $totalFat"
+                view.findViewById<TextView>(R.id.tvLunchTotalCarb)?.text = "C $totalCarb"
+            }
+            "Dinner" -> {
+                view.findViewById<TextView>(R.id.tvDinnerTotalCal)?.text = getString(R.string.format_kcal, totalCal)
+                view.findViewById<TextView>(R.id.tvDinnerTotalProtein)?.text = "P $totalProtein"
+                view.findViewById<TextView>(R.id.tvDinnerTotalFat)?.text = "F $totalFat"
+                view.findViewById<TextView>(R.id.tvDinnerTotalCarb)?.text = "C $totalCarb"
+            }
+            "Snack" -> {
+                view.findViewById<TextView>(R.id.tvSnackTotalCal)?.text = getString(R.string.format_kcal, totalCal)
+                view.findViewById<TextView>(R.id.tvSnackTotalProtein)?.text = "P $totalProtein"
+                view.findViewById<TextView>(R.id.tvSnackTotalFat)?.text = "F $totalFat"
+                view.findViewById<TextView>(R.id.tvSnackTotalCarb)?.text = "C $totalCarb"
+            }
+        }
+    }
+
     private fun renderMealItems(container: LinearLayout, logs: List<DietLog>) {
         container.removeAllViews()
         logs.forEach { log ->
             val itemView = LayoutInflater.from(requireContext())
                 .inflate(R.layout.item_meal_food, container, false)
             itemView.findViewById<TextView>(R.id.tvMealFoodName).text = log.foodName
-            itemView.findViewById<TextView>(R.id.tvMealFoodMacros).text =
-                "P: ${log.protein}g | F: ${log.fat}g | C: ${log.carb}g"
-            itemView.findViewById<TextView>(R.id.tvMealFoodCal).text =
-                getString(R.string.format_kcal, log.calories)
+
+            itemView.findViewById<TextView>(R.id.tvMealFoodCal).text = getString(R.string.format_kcal, log.calories)
 
             itemView.findViewById<View>(R.id.btnDeleteMealItem).setOnClickListener {
                 AlertDialog.Builder(requireContext())
