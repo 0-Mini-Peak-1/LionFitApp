@@ -46,8 +46,4 @@ data class DietLog(
     @SerialName("meal_type")
     @ColumnInfo(name = "meal_type")
     val mealType: String,
-
-    @SerialName("serving_size")
-    @ColumnInfo(name = "serving_size")
-    val servingSize: String? = "1 serving"
 )

@@ -361,7 +361,6 @@ class AddFoodFragment : Fragment(R.layout.fragment_add_food) {
                     fat = (food.fat * food.selectedQuantity).toInt(),
                     carb = (food.carbs * food.selectedQuantity).toInt(),
                     dateLogged = selectedDateMillis,
-                    servingSize = if (food.selectedQuantity > 1) "${food.serving} (x${food.selectedQuantity})" else food.serving
                 )
                 // Save to Local Room
                 db.dietDao().insertDietLog(dietLog)

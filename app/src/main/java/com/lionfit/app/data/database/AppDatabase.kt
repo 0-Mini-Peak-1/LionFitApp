@@ -13,7 +13,7 @@ import com.lionfit.app.data.model.WaterLog
 // All entities are listed here
 @Database(
     entities = [RunSession::class, SleepRecord::class, DietLog::class, WaterLog::class],
-    version = 15,
+    version = 16,
     exportSchema = false
 )
 // Tell Room to use the TypeConverter made for the running map coordinates
