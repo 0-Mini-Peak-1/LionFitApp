@@ -504,7 +504,7 @@ class RunningFragment : Fragment(R.layout.fragment_running) {
         // Set up the click actions
         btnConfirm.setOnClickListener {
             dialog.dismiss()
-            simulateFakeRun()
+            endRunAndNavigateToSave()
         }
 
         btnCancel.setOnClickListener {
