@@ -92,7 +92,16 @@ class DietFragment : Fragment(R.layout.fragment_diet) {
             val dietFlow = db.dietDao().getDatesWithLogs()
             val waterFlow = db.waterDao().getAllWaterLogs() // Get all water logs
 
-            // Combine both databases into one master list of dates!
+            // Optimization: Pre-fetch cloud dates once on startup to show dots immediately on fresh install
+            val cloudDates = try {
+                val dates = SupabaseManager.getLoggedDates()
+                val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+                dates.map { sdf.format(java.util.Date(it)) }.toSet()
+            } catch (e: Exception) {
+                emptySet()
+            }
+
+            // Combine both databases + Cloud Dates into one master list of dates!
             dietFlow.combine(waterFlow) { dietDates, waterLogs ->
                 val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
 
@@ -112,7 +121,7 @@ class DietFragment : Fragment(R.layout.fragment_diet) {
                 }.toSet()
 
                 // 3. Merge them together!
-                dietSet + waterSet
+                dietSet + waterSet + cloudDates
             }.collectLatest { combinedDates ->
                 availableDates = combinedDates
                 updateDateButtonsVisibility(view)

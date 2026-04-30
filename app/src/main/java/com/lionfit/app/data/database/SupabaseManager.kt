@@ -13,6 +13,7 @@ import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.storage.Storage
 import io.github.jan.supabase.storage.storage
 import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -200,18 +201,26 @@ object SupabaseManager {
         }
     }
 
+    @kotlinx.serialization.Serializable
+    private data class DateLoggedOnly(@kotlinx.serialization.SerialName("date_logged") val dateLogged: Long)
+
     suspend fun getLoggedDates(): Set<Long> {
         val currentUser = client.auth.currentUserOrNull() ?: return emptySet()
         return withContext(Dispatchers.IO) {
             try {
+                // Optimization: Only select "date_logged" to save bandwidth
                 val dietDates = client.postgrest.from("diet_logs")
-                    .select { filter { eq("user_id", currentUser.id) } }
-                    .decodeList<DietLog>()
+                    .select(columns = Columns.raw("date_logged")) {
+                        filter { eq("user_id", currentUser.id) }
+                    }
+                    .decodeList<DateLoggedOnly>()
                     .map { (it.dateLogged / 86400000) * 86400000 }
 
                 val waterDates = client.postgrest.from("water_logs")
-                    .select { filter { eq("user_id", currentUser.id) } }
-                    .decodeList<com.lionfit.app.data.model.WaterLog>()
+                    .select(columns = Columns.raw("date_logged")) {
+                        filter { eq("user_id", currentUser.id) }
+                    }
+                    .decodeList<DateLoggedOnly>()
                     .map { (it.dateLogged / 86400000) * 86400000 }
 
                 (dietDates + waterDates).toSet()
